@@ -1,0 +1,2512 @@
+Index: gfx/cairo/libpixman/src/pixman-transformed.c
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/cairo/libpixman/src/pixman-transformed.c,v
+retrieving revision 1.3
+diff -u -8 -p -r1.3 pixman-transformed.c
+--- gfx/cairo/libpixman/src/pixman-transformed.c	7 Apr 2008 05:07:39 -0000	1.3
++++ gfx/cairo/libpixman/src/pixman-transformed.c	24 Oct 2008 14:08:35 -0000
+@@ -52,195 +52,615 @@
+ 
+ #endif
+ 
+ /*
+  * Fetch from region strategies
+  */
+ typedef FASTCALL uint32_t (*fetchFromRegionProc)(bits_image_t *pict, int x, int y, uint32_t *buffer, fetchPixelProc fetch, pixman_box16_t *box);
+ 
++#define fbFetchPixel_x8r8g8b8(pict, offset, line) \
++    (uint32_t)(READ((pict), (uint32_t *)((pict)->bits + (line)*(pict)->rowstride) + (offset)) | 0xff000000)
++#define fbFetchPixel_a8r8g8b8(pict, offset, line) \
++    (uint32_t)(READ((pict), (uint32_t *)((pict)->bits + (line)*(pict)->rowstride) + (offset)))
++
++#define fbFetchPixel_x8r8g8b8_opt(pict, offset, lineaddr) \
++    (uint32_t)(READ((pict), (uint32_t *)(lineaddr) + (offset)) | 0xff000000)
++#define fbFetchPixel_a8r8g8b8_opt(pict, offset, lineaddr) \
++    (uint32_t)(READ((pict), (uint32_t *)(lineaddr) + (offset)))
++
++#ifdef _MSC_VER
++__forceinline uint32_t
++#else
+ static inline uint32_t
++#endif
+ fbFetchFromNoRegion(bits_image_t *pict, int x, int y, uint32_t *buffer, fetchPixelProc fetch, pixman_box16_t *box)
+ {
+-    return fetch (pict, x, y);
++    if (PIXMAN_x8r8g8b8 == pict->format)
++    {
++        return fbFetchPixel_x8r8g8b8(pict, x, y);
++    }
++    else if (PIXMAN_a8r8g8b8 == pict->format)
++    {
++        return fbFetchPixel_a8r8g8b8(pict, x, y);
++    }
++    else
++    {
++        return fetch(pict, x, y);
++    }
++}
++
++#ifdef _MSC_VER
++__forceinline uint32_t
++#else
++static inline uint32_t
++#endif
++fbFetchFromNoRegion_opt(bits_image_t *pict, int x, int y, uint32_t *lineaddr, fetchPixelProc fetch)
++{
++    if (PIXMAN_x8r8g8b8 == pict->format)
++    {
++        return fbFetchPixel_x8r8g8b8_opt(pict, x, lineaddr);
++    }
++    else if (PIXMAN_a8r8g8b8 == pict->format)
++    {
++        return fbFetchPixel_a8r8g8b8_opt(pict, x, lineaddr);
++    }
++    else
++    {
++        return fetch(pict, x, y);
++    }
+ }
+ 
+ static uint32_t
+ fbFetchFromNRectangles(bits_image_t *pict, int x, int y, uint32_t *buffer, fetchPixelProc fetch, pixman_box16_t *box)
+ {
+     pixman_box16_t box2;
+     if (pixman_region_contains_point (pict->common.src_clip, x, y, &box2))
+         return fbFetchFromNoRegion(pict, x, y, buffer, fetch, box);
+     else
+         return 0;
+ }
+ 
++#ifdef _MSC_VER
++__forceinline uint32_t
++#else
+ static uint32_t
++#endif
+ fbFetchFromOneRectangle(bits_image_t *pict, int x, int y, uint32_t *buffer, fetchPixelProc fetch, pixman_box16_t *box)
+ {
+     pixman_box16_t box2 = *box;
+     return ((x < box2.x1) | (x >= box2.x2) | (y < box2.y1) | (y >= box2.y2)) ?
+         0 : fbFetchFromNoRegion(pict, x, y, buffer, fetch, box);
+ }
+ 
++/* --------------- MMX primitivess ------------------------------------ */
++
++#ifdef __GNUC__
++typedef unsigned long long ullong;
++typedef ullong mmxdatafield;
++#endif
++#ifdef _MSC_VER
++typedef unsigned __int64 ullong;
++typedef __m64 mmxdatafield;
++#endif
++
++typedef struct
++{
++    mmxdatafield mmx_4x8000;
++    mmxdatafield mmx_2x00800000;
++    mmxdatafield mmx_2x00ff0000;
++} MMXData;
++
++static const MMXData c =
++{
++#ifdef __GNUC__
++    .mmx_4x8000 =     0x8000800080008000ULL;
++    .mmx_2x00800000 = 0x0080000000800000ULL;
++    .mmx_2x00ff0000 = 0x00ff000000ff0000ULL;
++#endif
++#ifdef _MSC_VER
++    { 0x8000800080008000UI64 },
++    { 0x0080000000800000UI64 },
++    { 0x00ff000000ff0000UI64 },
++#endif
++};
++
++#ifdef __GNUC__
++#define MC(x) ((__m64) c.mmx_##x)
++#endif
++#ifdef _MSC_VER
++#define MC(x) c.mmx_##x
++#endif
++
++#ifdef _MSC_VER
++__forceinline
++#else
++inline
++#endif
++static uint32_t transform_mmx(int distx, int idistx, int disty, int idisty,
++                              uint32_t tl, uint32_t tr, uint32_t bl, uint32_t br)
++{
++    uint32_t r;
++    __m64 mZero = _mm_setzero_si64();
++
++    __m64 tlm = _m_from_int(tl);
++    __m64 trm = _m_from_int(tr);
++    __m64 blm = _m_from_int(bl);
++    __m64 brm = _m_from_int(br);
++
++    __m64 tlrLm, tlrHm, blrLm, blrHm;
++    __m64 ftLm, ftHm, fbLm, fbHm;
++    __m64 rLm, rHm;
++
++    __m64 distxm, distym;
++/*
++    distxm = _mm_set_pi16(distx, idistx, distx, idistx);
++    distym = _mm_set_pi16(disty, idisty, disty, idisty);
++*/
++    distxm = _m_punpcklwd(_m_from_int(idistx), _m_from_int(distx));
++    distxm = _m_punpckldq(distxm, distxm);
++    distym = _m_punpcklwd(_m_from_int(idisty), _m_from_int(disty));
++    distym = _m_punpckldq(distym, distym);
++
++    tlm = _m_punpcklbw(tlm, mZero);
++    trm = _m_punpcklbw(trm, mZero);
++    tlrLm = _m_punpcklwd(tlm, trm);
++    tlrHm = _m_punpckhwd(tlm, trm);
++    ftLm = _m_pmaddwd(tlrLm, distxm);
++    ftHm = _m_pmaddwd(tlrHm, distxm);
++
++    blm = _m_punpcklbw(blm, mZero);
++    brm = _m_punpcklbw(brm, mZero);
++    blrLm = _m_punpcklwd(blm, brm);
++    blrHm = _m_punpckhwd(blm, brm);
++    fbLm = _m_pmaddwd(blrLm, distxm);
++    fbHm = _m_pmaddwd(blrHm, distxm);
++
++    rLm = _m_por(_m_pslldi(fbLm, 16), ftLm);
++    rLm = _m_paddw(rLm, MC(4x8000));
++    rLm = _m_pmaddwd(rLm, distym);
++    rLm = _m_paddd(rLm, MC(2x00800000));
++
++    rHm = _m_por(_m_pslldi(fbHm, 16), ftHm);
++    rHm = _m_paddw(rHm, MC(4x8000));
++    rHm = _m_pmaddwd(rHm, distym);
++    rHm = _m_paddd(rHm, MC(2x00800000));
++
++#if _M_IX86_FP >= 1 || defined(USE_SSE) || defined(USE_SSE2)
++    rLm = _m_pand(rLm, MC(2x00ff0000));
++    rLm = _m_psrlqi(rLm, 16);
++    rHm = _m_pand(rHm, MC(2x00ff0000));
++    rLm = _m_por(rLm, rHm);
++    rLm = _m_pshufw(rLm, _MM_SHUFFLE(3, 1, 2, 0));
++    rLm = _m_packuswb(rLm, mZero);
++    r = _m_to_int(rLm);
++#else
++    r = ((_m_to_int(rLm) >> 16) & 0xff);
++    r |= ((_m_to_int(_m_psrlqi(rLm, 32)) >> 8) & 0xff00);
++    r |= ((_m_to_int(rHm)) & 0xff0000);
++    r |= ((_m_to_int(_m_psrlqi(rHm, 32)) << 8) & 0xff000000);
++#endif
++    return r;
++}
++
++#ifdef _MSC_VER
++#undef MOD
++#define MOD(a, b) ((a) >= 0 ? MOD_TT(a, b) : ((b) - MOD_TT(-(a) - 1, b)) - 1)
++#ifndef PIXMAN_FB_ACCESSORS
++extern
++#endif
++int __fastcall MOD_TT(int a, int b);
++#endif
++
+ /*
+  * Fetching Algorithms
+  */
+ static void
+ fbFetchTransformed_Nearest_Normal(bits_image_t * pict, int width, uint32_t *buffer, uint32_t *mask, uint32_t maskBits, pixman_bool_t affine, pixman_vector_t v, pixman_vector_t unit)
+ {
+     pixman_box16_t* box = NULL;
+     fetchPixelProc   fetch;
+-    fetchFromRegionProc fetchFromRegion;
+     int x, y, i;
++    pixman_bool_t bNoRegion;
++    int y_old = 0;
++    int y_mod_old = 0;
++    uint32_t *y_line = pict->bits;
+ 
+     /* initialize the two function pointers */
+     fetch = FETCH_PIXEL_PROC_FOR_PICTURE(pict);
+ 
+-    if(pixman_region_n_rects (pict->common.src_clip) == 1)
+-        fetchFromRegion = fbFetchFromNoRegion;
+-    else
+-        fetchFromRegion = fbFetchFromNRectangles;
++    bNoRegion = (pixman_region_n_rects (pict->common.src_clip) == 1);
+ 
++if (bNoRegion && affine && unit.vector[2] == 0 && v.vector[2]) {
+     for ( i = 0; i < width; ++i)
+     {
+         if (!mask || mask[i] & maskBits)
+         {
+             if (!v.vector[2])
+             {
+                 *(buffer + i) = 0;
+             }
+             else
+             {
+                 if (!affine)
+                 {
+-                    y = MOD(DIV(v.vector[1],v.vector[2]), pict->height);
++                    y = DIV(v.vector[1],v.vector[2]);
+                     x = MOD(DIV(v.vector[0],v.vector[2]), pict->width);
+                 }
+                 else
+                 {
+-                    y = MOD(v.vector[1]>>16, pict->height);
++                    y = v.vector[1]>>16;
+                     x = MOD(v.vector[0]>>16, pict->width);
+                 }
+-                *(buffer + i) = fetchFromRegion(pict, x, y, buffer, fetch, box);
++
++                if (y_old != y) {
++                    y_old = y;
++                    y_mod_old = y = MOD(y, pict->height);
++                    y_line = pict->bits + y * pict->rowstride;
++                } else {
++                    y = y_mod_old;
++                }
++
++                if (bNoRegion)
++                {
++                    *(buffer + i) = fbFetchFromNoRegion_opt(pict, x, y, y_line, fetch);
++                }
++                else
++                {
++                    *(buffer + i) = fbFetchFromNRectangles(pict, x, y, buffer, fetch, box);
++                }
+             }
+         }
+ 
+         v.vector[0] += unit.vector[0];
+         v.vector[1] += unit.vector[1];
+         v.vector[2] += unit.vector[2];
+     }
++} else {
++    for ( i = 0; i < width; ++i)
++    {
++        if (!mask || mask[i] & maskBits)
++        {
++            if (!v.vector[2])
++            {
++                *(buffer + i) = 0;
++            }
++            else
++            {
++                if (!affine)
++                {
++                    y = DIV(v.vector[1],v.vector[2]);
++                    x = MOD(DIV(v.vector[0],v.vector[2]), pict->width);
++                }
++                else
++                {
++                    y = v.vector[1]>>16;
++                    x = MOD(v.vector[0]>>16, pict->width);
++                }
++
++                if (y_old != y) {
++                    y_old = y;
++                    y_mod_old = y = MOD(y, pict->height);
++                    y_line = pict->bits + y * pict->rowstride;
++                } else {
++                    y = y_mod_old;
++                }
++
++                if (bNoRegion)
++                {
++                    *(buffer + i) = fbFetchFromNoRegion_opt(pict, x, y, y_line, fetch);
++                }
++                else
++                {
++                    *(buffer + i) = fbFetchFromNRectangles(pict, x, y, buffer, fetch, box);
++                }
++            }
++        }
++
++        v.vector[0] += unit.vector[0];
++        v.vector[1] += unit.vector[1];
++        v.vector[2] += unit.vector[2];
++    }
++}
+ }
+ 
+ static void
+ fbFetchTransformed_Nearest_Pad(bits_image_t * pict, int width, uint32_t *buffer, uint32_t *mask, uint32_t maskBits, pixman_bool_t affine, pixman_vector_t v, pixman_vector_t unit)
+ {
+     pixman_box16_t *box = NULL;
+     fetchPixelProc   fetch;
+-    fetchFromRegionProc fetchFromRegion;
+     int x, y, i;
++    pixman_bool_t bNoRegion;
++    int y_old = 0;
++    int y_cliped_old = 0;
++    uint32_t *y_line = pict->bits;
+ 
+     /* initialize the two function pointers */
+     fetch = FETCH_PIXEL_PROC_FOR_PICTURE(pict);
+ 
+-    if(pixman_region_n_rects (pict->common.src_clip) == 1)
+-        fetchFromRegion = fbFetchFromNoRegion;
+-    else
+-        fetchFromRegion = fbFetchFromNRectangles;
++    bNoRegion = (pixman_region_n_rects (pict->common.src_clip) == 1);
++
++if (bNoRegion && affine && unit.vector[2] == 0 && v.vector[2]) {
++    for (i = 0; i < width; ++i)
++    {
++        if (!mask || mask[i] & maskBits)
++        {
++            if (!v.vector[2])
++            {
++                *(buffer + i) = 0;
++            }
++            else
++            {
++                if (!affine)
++                {
++                    y = DIV(v.vector[1], v.vector[2]);
++                    x = CLIP(DIV(v.vector[0], v.vector[2]), 0, pict->width-1);
++                }
++                else
++                {
++                    y = v.vector[1]>>16;
++                    x = CLIP(v.vector[0]>>16, 0, pict->width-1);
++                }
+ 
++                if (y_old != y) {
++                    y_old = y;
++                    y_cliped_old = y = CLIP(y, 0, pict->height-1);
++                    y_line = pict->bits + y * pict->rowstride;
++                } else {
++                    y = y_cliped_old;
++                }
++
++                if (bNoRegion)
++                {
++                    *(buffer + i) = fbFetchFromNoRegion_opt(pict, x, y, y_line, fetch);
++                }
++                else
++                {
++                    *(buffer + i) = fbFetchFromNRectangles(pict, x, y, buffer, fetch, box);
++                }
++            }
++        }
++
++        v.vector[0] += unit.vector[0];
++        v.vector[1] += unit.vector[1];
++        v.vector[2] += unit.vector[2];
++    }
++} else {
+     for (i = 0; i < width; ++i)
+     {
+         if (!mask || mask[i] & maskBits)
+         {
+             if (!v.vector[2])
+             {
+                 *(buffer + i) = 0;
+             }
+             else
+             {
+                 if (!affine)
+                 {
+-                    y = CLIP(DIV(v.vector[1], v.vector[2]), 0, pict->height-1);
++                    y = DIV(v.vector[1], v.vector[2]);
+                     x = CLIP(DIV(v.vector[0], v.vector[2]), 0, pict->width-1);
+                 }
+                 else
+                 {
+-                    y = CLIP(v.vector[1]>>16, 0, pict->height-1);
++                    y = v.vector[1]>>16;
+                     x = CLIP(v.vector[0]>>16, 0, pict->width-1);
+                 }
+ 
+-                *(buffer + i) = fetchFromRegion(pict, x, y, buffer, fetch, box);
++                if (y_old != y) {
++                    y_old = y;
++                    y_cliped_old = y = CLIP(y, 0, pict->height-1);
++                    y_line = pict->bits + y * pict->rowstride;
++                } else {
++                    y = y_cliped_old;
++                }
++
++                if (bNoRegion)
++                {
++                    *(buffer + i) = fbFetchFromNoRegion_opt(pict, x, y, y_line, fetch);
++                }
++                else
++                {
++                    *(buffer + i) = fbFetchFromNRectangles(pict, x, y, buffer, fetch, box);
++                }
+             }
+         }
+ 
+         v.vector[0] += unit.vector[0];
+         v.vector[1] += unit.vector[1];
+         v.vector[2] += unit.vector[2];
+     }
+ }
++}
+ 
+ static void
+ fbFetchTransformed_Nearest_General(bits_image_t * pict, int width, uint32_t *buffer, uint32_t *mask, uint32_t maskBits, pixman_bool_t affine, pixman_vector_t v, pixman_vector_t unit)
+ {
+     pixman_box16_t *box = NULL;
+     fetchPixelProc   fetch;
+-    fetchFromRegionProc fetchFromRegion;
+     int x, y, i;
++    pixman_bool_t bNoRegion;
+ 
+     /* initialize the two function pointers */
+     fetch = FETCH_PIXEL_PROC_FOR_PICTURE(pict);
+ 
+-    if(pixman_region_n_rects (pict->common.src_clip) == 1)
++    bNoRegion = (pixman_region_n_rects (pict->common.src_clip) == 1);
++    if(bNoRegion)
+     {
+         box = &(pict->common.src_clip->extents);
+-        fetchFromRegion = fbFetchFromOneRectangle;
+-    }
+-    else
+-    {
+-        fetchFromRegion = fbFetchFromNRectangles;
+     }
+ 
++if (bNoRegion && affine && unit.vector[2] == 0 && v.vector[2]) {
+     for (i = 0; i < width; ++i) {
+         if (!mask || mask[i] & maskBits)
+         {
+             if (!v.vector[2]) {
+                 *(buffer + i) = 0;
+             } else {
+                 if (!affine) {
+                     y = DIV(v.vector[1],v.vector[2]);
+                     x = DIV(v.vector[0],v.vector[2]);
+                 } else {
+                     y = v.vector[1]>>16;
+                     x = v.vector[0]>>16;
+                 }
+-                *(buffer + i) = fetchFromRegion(pict, x, y, buffer, fetch, box);
++
++                if (bNoRegion)
++                {
++                    *(buffer + i) = fbFetchFromOneRectangle(pict, x, y, buffer, fetch, box);
++                }
++                else
++                {
++                    *(buffer + i) = fbFetchFromNRectangles(pict, x, y, buffer, fetch, box);
++                }
+             }
+         }
+         v.vector[0] += unit.vector[0];
+         v.vector[1] += unit.vector[1];
+         v.vector[2] += unit.vector[2];
+     }
++} else {
++    for (i = 0; i < width; ++i) {
++        if (!mask || mask[i] & maskBits)
++        {
++            if (!v.vector[2]) {
++                *(buffer + i) = 0;
++            } else {
++                if (!affine) {
++                    y = DIV(v.vector[1],v.vector[2]);
++                    x = DIV(v.vector[0],v.vector[2]);
++                } else {
++                    y = v.vector[1]>>16;
++                    x = v.vector[0]>>16;
++                }
++
++                if (bNoRegion)
++                {
++                    *(buffer + i) = fbFetchFromOneRectangle(pict, x, y, buffer, fetch, box);
++                }
++                else
++                {
++                    *(buffer + i) = fbFetchFromNRectangles(pict, x, y, buffer, fetch, box);
++                }
++            }
++        }
++        v.vector[0] += unit.vector[0];
++        v.vector[1] += unit.vector[1];
++        v.vector[2] += unit.vector[2];
++    }
++}
+ }
+ 
+ static void
+ fbFetchTransformed_Bilinear_Normal(bits_image_t * pict, int width, uint32_t *buffer, uint32_t *mask, uint32_t maskBits, pixman_bool_t affine, pixman_vector_t v, pixman_vector_t unit)
+ {
+     pixman_box16_t *box = NULL;
+     fetchPixelProc   fetch;
+-    fetchFromRegionProc fetchFromRegion;
+     int i;
++    pixman_bool_t bNoRegion;
++    int y1_old = 0;
++    int y1_mod_old = 0;
++    int y2_mod_old = 1;
++    uint32_t *y1_line = pict->bits;
++    uint32_t *y2_line = pict->bits + y2_mod_old * pict->rowstride;
+ 
+     /* initialize the two function pointers */
+     fetch = FETCH_PIXEL_PROC_FOR_PICTURE(pict);
+ 
+-    if(pixman_region_n_rects (pict->common.src_clip) == 1)
+-        fetchFromRegion = fbFetchFromNoRegion;
+-    else
+-        fetchFromRegion = fbFetchFromNRectangles;
++    bNoRegion = (pixman_region_n_rects (pict->common.src_clip) == 1);
++
++if (bNoRegion && affine && unit.vector[2] == 0 && v.vector[2]) {
++    for (i = 0; i < width; ++i) {
++        if (!mask || mask[i] & maskBits)
++        {
++            if (!v.vector[2]) {
++                *(buffer + i) = 0;
++            } else {
++                int x1, x2, y1, y2, distx, idistx, disty, idisty;
++                uint32_t tl, tr, bl, br, r;
++                uint32_t ft, fb;
++
++                if (!affine) {
++                    pixman_fixed_48_16_t div;
++                    div = ((pixman_fixed_48_16_t)v.vector[0] << 16)/v.vector[2];
++                    x1 = div >> 16;
++                    distx = ((pixman_fixed_t)div >> 8) & 0xff;
++                    div = ((pixman_fixed_48_16_t)v.vector[1] << 16)/v.vector[2];
++                    y1 = div >> 16;
++                    disty = ((pixman_fixed_t)div >> 8) & 0xff;
++                } else {
++                    x1 = v.vector[0] >> 16;
++                    distx = (v.vector[0] >> 8) & 0xff;
++                    y1 = v.vector[1] >> 16;
++                    disty = (v.vector[1] >> 8) & 0xff;
++                }
++                x2 = x1 + 1;
++                y2 = y1 + 1;
++
++                idistx = 256 - distx;
++                idisty = 256 - disty;
++
++                x1 = MOD (x1, pict->width);
++                x2 = MOD (x2, pict->width);
+ 
++                if (y1_old != y1) {
++                    y1_old = y1;
++                    y1_mod_old = y1 = MOD (y1, pict->height);
++                    y2_mod_old = y2 = MOD (y2, pict->height);
++                    y1_line = pict->bits + y1 * pict->rowstride;
++                    y2_line = pict->bits + y2 * pict->rowstride;
++                } else {
++                    y1 = y1_mod_old;
++                    y2 = y2_mod_old;
++                }
++
++                if (bNoRegion) {
++                    if (PIXMAN_x8r8g8b8 == pict->format)
++                    {
++                        tl = fbFetchPixel_x8r8g8b8_opt(pict, x1, y1_line);
++                        tr = fbFetchPixel_x8r8g8b8_opt(pict, x2, y1_line);
++                        bl = fbFetchPixel_x8r8g8b8_opt(pict, x1, y2_line);
++                        br = fbFetchPixel_x8r8g8b8_opt(pict, x2, y2_line);
++                    }
++                    else if (PIXMAN_a8r8g8b8 == pict->format)
++                    {
++                        tl = fbFetchPixel_a8r8g8b8_opt(pict, x1, y1_line);
++                        tr = fbFetchPixel_a8r8g8b8_opt(pict, x2, y1_line);
++                        bl = fbFetchPixel_a8r8g8b8_opt(pict, x1, y2_line);
++                        br = fbFetchPixel_a8r8g8b8_opt(pict, x2, y2_line);
++                    }
++                    else
++                    {
++                        tl = fetch(pict, x1, y1);
++                        tr = fetch(pict, x2, y1);
++                        bl = fetch(pict, x1, y2);
++                        br = fetch(pict, x2, y2);
++                    }
++                } else {
++                    tl = fbFetchFromNRectangles(pict, x1, y1, buffer, fetch, box);
++                    tr = fbFetchFromNRectangles(pict, x2, y1, buffer, fetch, box);
++                    bl = fbFetchFromNRectangles(pict, x1, y2, buffer, fetch, box);
++                    br = fbFetchFromNRectangles(pict, x2, y2, buffer, fetch, box);
++                }
++
++                if (tl != br || tl != tr || tl != bl)
++                {
++                    *(buffer + i) = transform_mmx(distx, idistx, disty, idisty, tl, tr, bl, br);
++                }
++                else
++                {
++                    *(buffer + i) = tl;
++                }
++            }
++        }
++        v.vector[0] += unit.vector[0];
++        v.vector[1] += unit.vector[1];
++        v.vector[2] += unit.vector[2];
++    }
++} else {
+     for (i = 0; i < width; ++i) {
+         if (!mask || mask[i] & maskBits)
+         {
+             if (!v.vector[2]) {
+                 *(buffer + i) = 0;
+             } else {
+                 int x1, x2, y1, y2, distx, idistx, disty, idisty;
+                 uint32_t tl, tr, bl, br, r;
+@@ -263,61 +683,94 @@ fbFetchTransformed_Bilinear_Normal(bits_
+                 x2 = x1 + 1;
+                 y2 = y1 + 1;
+ 
+                 idistx = 256 - distx;
+                 idisty = 256 - disty;
+ 
+                 x1 = MOD (x1, pict->width);
+                 x2 = MOD (x2, pict->width);
+-                y1 = MOD (y1, pict->height);
+-                y2 = MOD (y2, pict->height);
+ 
+-                tl = fetchFromRegion(pict, x1, y1, buffer, fetch, box);
+-                tr = fetchFromRegion(pict, x2, y1, buffer, fetch, box);
+-                bl = fetchFromRegion(pict, x1, y2, buffer, fetch, box);
+-                br = fetchFromRegion(pict, x2, y2, buffer, fetch, box);
+-
+-                ft = FbGet8(tl,0) * idistx + FbGet8(tr,0) * distx;
+-                fb = FbGet8(bl,0) * idistx + FbGet8(br,0) * distx;
+-                r = (((ft * idisty + fb * disty) >> 16) & 0xff);
+-                ft = FbGet8(tl,8) * idistx + FbGet8(tr,8) * distx;
+-                fb = FbGet8(bl,8) * idistx + FbGet8(br,8) * distx;
+-                r |= (((ft * idisty + fb * disty) >> 8) & 0xff00);
+-                ft = FbGet8(tl,16) * idistx + FbGet8(tr,16) * distx;
+-                fb = FbGet8(bl,16) * idistx + FbGet8(br,16) * distx;
+-                r |= (((ft * idisty + fb * disty)) & 0xff0000);
+-                ft = FbGet8(tl,24) * idistx + FbGet8(tr,24) * distx;
+-                fb = FbGet8(bl,24) * idistx + FbGet8(br,24) * distx;
+-                r |= (((ft * idisty + fb * disty) << 8) & 0xff000000);
+-                *(buffer + i) = r;
++                if (y1_old != y1) {
++                    y1_old = y1;
++                    y1_mod_old = y1 = MOD (y1, pict->height);
++                    y2_mod_old = y2 = MOD (y2, pict->height);
++                    y1_line = pict->bits + y1 * pict->rowstride;
++                    y2_line = pict->bits + y2 * pict->rowstride;
++                } else {
++                    y1 = y1_mod_old;
++                    y2 = y2_mod_old;
++                }
++
++                if (bNoRegion) {
++                    if (PIXMAN_x8r8g8b8 == pict->format)
++                    {
++                        tl = fbFetchPixel_x8r8g8b8_opt(pict, x1, y1_line);
++                        tr = fbFetchPixel_x8r8g8b8_opt(pict, x2, y1_line);
++                        bl = fbFetchPixel_x8r8g8b8_opt(pict, x1, y2_line);
++                        br = fbFetchPixel_x8r8g8b8_opt(pict, x2, y2_line);
++                    }
++                    else if (PIXMAN_a8r8g8b8 == pict->format)
++                    {
++                        tl = fbFetchPixel_a8r8g8b8_opt(pict, x1, y1_line);
++                        tr = fbFetchPixel_a8r8g8b8_opt(pict, x2, y1_line);
++                        bl = fbFetchPixel_a8r8g8b8_opt(pict, x1, y2_line);
++                        br = fbFetchPixel_a8r8g8b8_opt(pict, x2, y2_line);
++                    }
++                    else
++                    {
++                        tl = fetch(pict, x1, y1);
++                        tr = fetch(pict, x2, y1);
++                        bl = fetch(pict, x1, y2);
++                        br = fetch(pict, x2, y2);
++                    }
++                } else {
++                    tl = fbFetchFromNRectangles(pict, x1, y1, buffer, fetch, box);
++                    tr = fbFetchFromNRectangles(pict, x2, y1, buffer, fetch, box);
++                    bl = fbFetchFromNRectangles(pict, x1, y2, buffer, fetch, box);
++                    br = fbFetchFromNRectangles(pict, x2, y2, buffer, fetch, box);
++                }
++
++                if (tl != br || tl != tr || tl != bl)
++                {
++                    *(buffer + i) = transform_mmx(distx, idistx, disty, idisty, tl, tr, bl, br);
++                }
++                else
++                {
++                    *(buffer + i) = tl;
++                }
+             }
+         }
+         v.vector[0] += unit.vector[0];
+         v.vector[1] += unit.vector[1];
+         v.vector[2] += unit.vector[2];
+     }
+ }
++    _mm_empty();
++}
+ 
+ static void
+ fbFetchTransformed_Bilinear_Pad(bits_image_t * pict, int width, uint32_t *buffer, uint32_t *mask, uint32_t maskBits, pixman_bool_t affine, pixman_vector_t v, pixman_vector_t unit)
+ {
+     pixman_box16_t *box = NULL;
+     fetchPixelProc   fetch;
+-    fetchFromRegionProc fetchFromRegion;
+     int i;
++    pixman_bool_t bNoRegion;
++    int y1_old = 0;
++    int y1_cliped_old = 0;
++    int y2_cliped_old = CLIP (1, 0, pict->height-1);
++    uint32_t *y1_line = pict->bits;
++    uint32_t *y2_line = pict->bits + y2_cliped_old * pict->rowstride;
+ 
+     /* initialize the two function pointers */
+     fetch = FETCH_PIXEL_PROC_FOR_PICTURE(pict);
+ 
+-    if(pixman_region_n_rects (pict->common.src_clip) == 1)
+-        fetchFromRegion = fbFetchFromNoRegion;
+-    else
+-        fetchFromRegion = fbFetchFromNRectangles;
++    bNoRegion = (pixman_region_n_rects (pict->common.src_clip) == 1);
+ 
++if (bNoRegion && affine && unit.vector[2] == 0 && v.vector[2]) {
+     for (i = 0; i < width; ++i) {
+         if (!mask || mask[i] & maskBits)
+         {
+             if (!v.vector[2]) {
+                 *(buffer + i) = 0;
+             } else {
+                 int x1, x2, y1, y2, distx, idistx, disty, idisty;
+                 uint32_t tl, tr, bl, br, r;
+@@ -338,68 +791,285 @@ fbFetchTransformed_Bilinear_Pad(bits_ima
+                     disty = (v.vector[1] >> 8) & 0xff;
+                 }
+                 x2 = x1 + 1;
+                 y2 = y1 + 1;
+ 
+                 idistx = 256 - distx;
+                 idisty = 256 - disty;
+ 
+-                x1 = CLIP (x1, 0, pict->width-1);
+-                x2 = CLIP (x2, 0, pict->width-1);
+-                y1 = CLIP (y1, 0, pict->height-1);
+-                y2 = CLIP (y2, 0, pict->height-1);
+-
+-                tl = fetchFromRegion(pict, x1, y1, buffer, fetch, box);
+-                tr = fetchFromRegion(pict, x2, y1, buffer, fetch, box);
+-                bl = fetchFromRegion(pict, x1, y2, buffer, fetch, box);
+-                br = fetchFromRegion(pict, x2, y2, buffer, fetch, box);
+-
+-                ft = FbGet8(tl,0) * idistx + FbGet8(tr,0) * distx;
+-                fb = FbGet8(bl,0) * idistx + FbGet8(br,0) * distx;
+-                r = (((ft * idisty + fb * disty) >> 16) & 0xff);
+-                ft = FbGet8(tl,8) * idistx + FbGet8(tr,8) * distx;
+-                fb = FbGet8(bl,8) * idistx + FbGet8(br,8) * distx;
+-                r |= (((ft * idisty + fb * disty) >> 8) & 0xff00);
+-                ft = FbGet8(tl,16) * idistx + FbGet8(tr,16) * distx;
+-                fb = FbGet8(bl,16) * idistx + FbGet8(br,16) * distx;
+-                r |= (((ft * idisty + fb * disty)) & 0xff0000);
+-                ft = FbGet8(tl,24) * idistx + FbGet8(tr,24) * distx;
+-                fb = FbGet8(bl,24) * idistx + FbGet8(br,24) * distx;
+-                r |= (((ft * idisty + fb * disty) << 8) & 0xff000000);
+-                *(buffer + i) = r;
++                if (x1 < 0 || x2 >= pict->width) {
++                    x1 = CLIP (x1, 0, pict->width-1);
++                    x2 = CLIP (x2, 0, pict->width-1);
++                }
++
++                if (y1_old != y1) {
++                    y1_old = y1;
++                    y1_cliped_old = y1 = CLIP (y1, 0, pict->height-1);
++                    y2_cliped_old = y2 = CLIP (y2, 0, pict->height-1);
++                    y1_line = pict->bits + y1 * pict->rowstride;
++                    y2_line = pict->bits + y2 * pict->rowstride;
++                } else {
++                    y1 = y1_cliped_old;
++                    y2 = y2_cliped_old;
++                }
++
++                if (bNoRegion) {
++                    if (PIXMAN_x8r8g8b8 == pict->format)
++                    {
++                        tl = fbFetchPixel_x8r8g8b8_opt(pict, x1, y1_line);
++                        tr = fbFetchPixel_x8r8g8b8_opt(pict, x2, y1_line);
++                        bl = fbFetchPixel_x8r8g8b8_opt(pict, x1, y2_line);
++                        br = fbFetchPixel_x8r8g8b8_opt(pict, x2, y2_line);
++                    }
++                    else if (PIXMAN_a8r8g8b8 == pict->format)
++                    {
++                        tl = fbFetchPixel_a8r8g8b8_opt(pict, x1, y1_line);
++                        tr = fbFetchPixel_a8r8g8b8_opt(pict, x2, y1_line);
++                        bl = fbFetchPixel_a8r8g8b8_opt(pict, x1, y2_line);
++                        br = fbFetchPixel_a8r8g8b8_opt(pict, x2, y2_line);
++                    }
++                    else
++                    {
++                        tl = fetch(pict, x1, y1);
++                        tr = fetch(pict, x2, y1);
++                        bl = fetch(pict, x1, y2);
++                        br = fetch(pict, x2, y2);
++                    }
++                } else {
++                    tl = fbFetchFromNRectangles(pict, x1, y1, buffer, fetch, box);
++                    tr = fbFetchFromNRectangles(pict, x2, y1, buffer, fetch, box);
++                    bl = fbFetchFromNRectangles(pict, x1, y2, buffer, fetch, box);
++                    br = fbFetchFromNRectangles(pict, x2, y2, buffer, fetch, box);
++                }
++
++                if (tl != br || tl != tr || tl != bl)
++                {
++                    *(buffer + i) = transform_mmx(distx, idistx, disty, idisty, tl, tr, bl, br);
++                }
++                else
++                {
++                    *(buffer + i) = tl;
++                }
++            }
++        }
++        v.vector[0] += unit.vector[0];
++        v.vector[1] += unit.vector[1];
++        v.vector[2] += unit.vector[2];
++    }
++} else {
++    for (i = 0; i < width; ++i) {
++        if (!mask || mask[i] & maskBits)
++        {
++            if (!v.vector[2]) {
++                *(buffer + i) = 0;
++            } else {
++                int x1, x2, y1, y2, distx, idistx, disty, idisty;
++                uint32_t tl, tr, bl, br, r;
++                uint32_t ft, fb;
++
++                if (!affine) {
++                    pixman_fixed_48_16_t div;
++                    div = ((pixman_fixed_48_16_t)v.vector[0] << 16)/v.vector[2];
++                    x1 = div >> 16;
++                    distx = ((pixman_fixed_t)div >> 8) & 0xff;
++                    div = ((pixman_fixed_48_16_t)v.vector[1] << 16)/v.vector[2];
++                    y1 = div >> 16;
++                    disty = ((pixman_fixed_t)div >> 8) & 0xff;
++                } else {
++                    x1 = v.vector[0] >> 16;
++                    distx = (v.vector[0] >> 8) & 0xff;
++                    y1 = v.vector[1] >> 16;
++                    disty = (v.vector[1] >> 8) & 0xff;
++                }
++                x2 = x1 + 1;
++                y2 = y1 + 1;
++
++                idistx = 256 - distx;
++                idisty = 256 - disty;
++
++                if (x1 < 0 || x2 >= pict->width) {
++                    x1 = CLIP (x1, 0, pict->width-1);
++                    x2 = CLIP (x2, 0, pict->width-1);
++                }
++
++                if (y1_old != y1) {
++                    y1_old = y1;
++                    y1_cliped_old = y1 = CLIP (y1, 0, pict->height-1);
++                    y2_cliped_old = y2 = CLIP (y2, 0, pict->height-1);
++                    y1_line = pict->bits + y1 * pict->rowstride;
++                    y2_line = pict->bits + y2 * pict->rowstride;
++                } else {
++                    y1 = y1_cliped_old;
++                    y2 = y2_cliped_old;
++                }
++
++                if (bNoRegion) {
++                    if (PIXMAN_x8r8g8b8 == pict->format)
++                    {
++                        tl = fbFetchPixel_x8r8g8b8_opt(pict, x1, y1_line);
++                        tr = fbFetchPixel_x8r8g8b8_opt(pict, x2, y1_line);
++                        bl = fbFetchPixel_x8r8g8b8_opt(pict, x1, y2_line);
++                        br = fbFetchPixel_x8r8g8b8_opt(pict, x2, y2_line);
++                    }
++                    else if (PIXMAN_a8r8g8b8 == pict->format)
++                    {
++                        tl = fbFetchPixel_a8r8g8b8_opt(pict, x1, y1_line);
++                        tr = fbFetchPixel_a8r8g8b8_opt(pict, x2, y1_line);
++                        bl = fbFetchPixel_a8r8g8b8_opt(pict, x1, y2_line);
++                        br = fbFetchPixel_a8r8g8b8_opt(pict, x2, y2_line);
++                    }
++                    else
++                    {
++                        tl = fetch(pict, x1, y1);
++                        tr = fetch(pict, x2, y1);
++                        bl = fetch(pict, x1, y2);
++                        br = fetch(pict, x2, y2);
++                    }
++                } else {
++                    tl = fbFetchFromNRectangles(pict, x1, y1, buffer, fetch, box);
++                    tr = fbFetchFromNRectangles(pict, x2, y1, buffer, fetch, box);
++                    bl = fbFetchFromNRectangles(pict, x1, y2, buffer, fetch, box);
++                    br = fbFetchFromNRectangles(pict, x2, y2, buffer, fetch, box);
++                }
++
++                if (tl != br || tl != tr || tl != bl)
++                {
++                    *(buffer + i) = transform_mmx(distx, idistx, disty, idisty, tl, tr, bl, br);
++                }
++                else
++                {
++                    *(buffer + i) = tl;
++                }
+             }
+         }
+         v.vector[0] += unit.vector[0];
+         v.vector[1] += unit.vector[1];
+         v.vector[2] += unit.vector[2];
+     }
+ }
++    _mm_empty();
++}
+ 
+ static void
+ fbFetchTransformed_Bilinear_General(bits_image_t * pict, int width, uint32_t *buffer, uint32_t *mask, uint32_t maskBits, pixman_bool_t affine, pixman_vector_t v, pixman_vector_t unit)
+ {
+     pixman_box16_t *box = NULL;
+     fetchPixelProc   fetch;
+-    fetchFromRegionProc fetchFromRegion;
+     int i;
++    pixman_bool_t bNoRegion;
++    int y1_old = 0;
++    uint32_t *y1_line = pict->bits;
++    uint32_t *y2_line = pict->bits + 1 * pict->rowstride;
+ 
+     /* initialize the two function pointers */
+     fetch = FETCH_PIXEL_PROC_FOR_PICTURE(pict);
+ 
+-    if(pixman_region_n_rects (pict->common.src_clip) == 1)
++    bNoRegion = (pixman_region_n_rects (pict->common.src_clip) == 1);
++    if(bNoRegion)
+     {
+         box = &(pict->common.src_clip->extents);
+-        fetchFromRegion = fbFetchFromOneRectangle;
+     }
+-    else
++
++if (bNoRegion && affine && unit.vector[2] == 0 && v.vector[2]) {
++    for (i = 0; i < width; ++i)
+     {
+-        fetchFromRegion = fbFetchFromNRectangles;
+-    }
++        if (!mask || mask[i] & maskBits)
++        {
++            if (!v.vector[2]) {
++                *(buffer + i) = 0;
++            } else {
++                int x1, x2, y1, y2, distx, idistx, disty, idisty;
++                uint32_t tl, tr, bl, br, r;
++                uint32_t ft, fb;
+ 
++                if (!affine) {
++                    pixman_fixed_48_16_t div;
++                    div = ((pixman_fixed_48_16_t)v.vector[0] << 16)/v.vector[2];
++                    x1 = div >> 16;
++                    distx = ((pixman_fixed_t)div >> 8) & 0xff;
++                    div = ((pixman_fixed_48_16_t)v.vector[1] << 16)/v.vector[2];
++                    y1 = div >> 16;
++                    disty = ((pixman_fixed_t)div >> 8) & 0xff;
++                } else {
++                    x1 = v.vector[0] >> 16;
++                    distx = (v.vector[0] >> 8) & 0xff;
++                    y1 = v.vector[1] >> 16;
++                    disty = (v.vector[1] >> 8) & 0xff;
++                }
++                x2 = x1 + 1;
++                y2 = y1 + 1;
++
++                if (y1_old != y1) {
++                    y1_old = y1;
++                    y1_line = pict->bits + y1 * pict->rowstride;
++                    y2_line = pict->bits + y2 * pict->rowstride;
++                }
++
++                idistx = 256 - distx;
++                idisty = 256 - disty;
++
++                if (bNoRegion)
++                {
++                    if ((x1 >= box->x1) && (x2 < box->x2) && (y1 >= box->y1) && (y2 < box->y2))
++                    {
++                        if (PIXMAN_x8r8g8b8 == pict->format)
++                        {
++                            tl = fbFetchPixel_x8r8g8b8_opt(pict, x1, y1_line);
++                            tr = fbFetchPixel_x8r8g8b8_opt(pict, x2, y1_line);
++                            bl = fbFetchPixel_x8r8g8b8_opt(pict, x1, y2_line);
++                            br = fbFetchPixel_x8r8g8b8_opt(pict, x2, y2_line);
++                        }
++                        else if (PIXMAN_a8r8g8b8 == pict->format)
++                        {
++                            tl = fbFetchPixel_a8r8g8b8_opt(pict, x1, y1_line);
++                            tr = fbFetchPixel_a8r8g8b8_opt(pict, x2, y1_line);
++                            bl = fbFetchPixel_a8r8g8b8_opt(pict, x1, y2_line);
++                            br = fbFetchPixel_a8r8g8b8_opt(pict, x2, y2_line);
++                        }
++                        else
++                        {
++                            tl = fetch(pict, x1, y1);
++                            tr = fetch(pict, x2, y1);
++                            bl = fetch(pict, x1, y2);
++                            br = fetch(pict, x2, y2);
++                        }
++                    }
++                    else
++                    {
++                        tl = fbFetchFromOneRectangle(pict, x1, y1, buffer, fetch, box);
++                        tr = fbFetchFromOneRectangle(pict, x2, y1, buffer, fetch, box);
++                        bl = fbFetchFromOneRectangle(pict, x1, y2, buffer, fetch, box);
++                        br = fbFetchFromOneRectangle(pict, x2, y2, buffer, fetch, box);
++                    }
++                }
++                else
++                {
++                    tl = fbFetchFromNRectangles(pict, x1, y1, buffer, fetch, box);
++                    tr = fbFetchFromNRectangles(pict, x2, y1, buffer, fetch, box);
++                    bl = fbFetchFromNRectangles(pict, x1, y2, buffer, fetch, box);
++                    br = fbFetchFromNRectangles(pict, x2, y2, buffer, fetch, box);
++                }
++
++                if (tl != br || tl != tr || tl != bl)
++                {
++                    *(buffer + i) = transform_mmx(distx, idistx, disty, idisty, tl, tr, bl, br);
++                }
++                else
++                {
++                    *(buffer + i) = tl;
++                }
++            }
++        }
++
++        v.vector[0] += unit.vector[0];
++        v.vector[1] += unit.vector[1];
++        v.vector[2] += unit.vector[2];
++    }
++} else {
+     for (i = 0; i < width; ++i)
+     {
+         if (!mask || mask[i] & maskBits)
+         {
+             if (!v.vector[2]) {
+                 *(buffer + i) = 0;
+             } else {
+                 int x1, x2, y1, y2, distx, idistx, disty, idisty;
+@@ -418,45 +1088,85 @@ fbFetchTransformed_Bilinear_General(bits
+                     x1 = v.vector[0] >> 16;
+                     distx = (v.vector[0] >> 8) & 0xff;
+                     y1 = v.vector[1] >> 16;
+                     disty = (v.vector[1] >> 8) & 0xff;
+                 }
+                 x2 = x1 + 1;
+                 y2 = y1 + 1;
+ 
++                if (y1_old != y1) {
++                    y1_old = y1;
++                    y1_line = pict->bits + y1 * pict->rowstride;
++                    y2_line = pict->bits + y2 * pict->rowstride;
++                }
++
+                 idistx = 256 - distx;
+                 idisty = 256 - disty;
+ 
+-                tl = fetchFromRegion(pict, x1, y1, buffer, fetch, box);
+-                tr = fetchFromRegion(pict, x2, y1, buffer, fetch, box);
+-                bl = fetchFromRegion(pict, x1, y2, buffer, fetch, box);
+-                br = fetchFromRegion(pict, x2, y2, buffer, fetch, box);
+-
+-                ft = FbGet8(tl,0) * idistx + FbGet8(tr,0) * distx;
+-                fb = FbGet8(bl,0) * idistx + FbGet8(br,0) * distx;
+-                r = (((ft * idisty + fb * disty) >> 16) & 0xff);
+-                ft = FbGet8(tl,8) * idistx + FbGet8(tr,8) * distx;
+-                fb = FbGet8(bl,8) * idistx + FbGet8(br,8) * distx;
+-                r |= (((ft * idisty + fb * disty) >> 8) & 0xff00);
+-                ft = FbGet8(tl,16) * idistx + FbGet8(tr,16) * distx;
+-                fb = FbGet8(bl,16) * idistx + FbGet8(br,16) * distx;
+-                r |= (((ft * idisty + fb * disty)) & 0xff0000);
+-                ft = FbGet8(tl,24) * idistx + FbGet8(tr,24) * distx;
+-                fb = FbGet8(bl,24) * idistx + FbGet8(br,24) * distx;
+-                r |= (((ft * idisty + fb * disty) << 8) & 0xff000000);
+-                *(buffer + i) = r;
++                if (bNoRegion)
++                {
++                    if ((x1 >= box->x1) && (x2 < box->x2) && (y1 >= box->y1) && (y2 < box->y2))
++                    {
++                        if (PIXMAN_x8r8g8b8 == pict->format)
++                        {
++                            tl = fbFetchPixel_x8r8g8b8_opt(pict, x1, y1_line);
++                            tr = fbFetchPixel_x8r8g8b8_opt(pict, x2, y1_line);
++                            bl = fbFetchPixel_x8r8g8b8_opt(pict, x1, y2_line);
++                            br = fbFetchPixel_x8r8g8b8_opt(pict, x2, y2_line);
++                        }
++                        else if (PIXMAN_a8r8g8b8 == pict->format)
++                        {
++                            tl = fbFetchPixel_a8r8g8b8_opt(pict, x1, y1_line);
++                            tr = fbFetchPixel_a8r8g8b8_opt(pict, x2, y1_line);
++                            bl = fbFetchPixel_a8r8g8b8_opt(pict, x1, y2_line);
++                            br = fbFetchPixel_a8r8g8b8_opt(pict, x2, y2_line);
++                        }
++                        else
++                        {
++                            tl = fetch(pict, x1, y1);
++                            tr = fetch(pict, x2, y1);
++                            bl = fetch(pict, x1, y2);
++                            br = fetch(pict, x2, y2);
++                        }
++                    }
++                    else
++                    {
++                        tl = fbFetchFromOneRectangle(pict, x1, y1, buffer, fetch, box);
++                        tr = fbFetchFromOneRectangle(pict, x2, y1, buffer, fetch, box);
++                        bl = fbFetchFromOneRectangle(pict, x1, y2, buffer, fetch, box);
++                        br = fbFetchFromOneRectangle(pict, x2, y2, buffer, fetch, box);
++                    }
++                }
++                else
++                {
++                    tl = fbFetchFromNRectangles(pict, x1, y1, buffer, fetch, box);
++                    tr = fbFetchFromNRectangles(pict, x2, y1, buffer, fetch, box);
++                    bl = fbFetchFromNRectangles(pict, x1, y2, buffer, fetch, box);
++                    br = fbFetchFromNRectangles(pict, x2, y2, buffer, fetch, box);
++                }
++
++                if (tl != br || tl != tr || tl != bl)
++                {
++                    *(buffer + i) = transform_mmx(distx, idistx, disty, idisty, tl, tr, bl, br);
++                }
++                else
++                {
++                    *(buffer + i) = tl;
++                }
+             }
+         }
+ 
+         v.vector[0] += unit.vector[0];
+         v.vector[1] += unit.vector[1];
+         v.vector[2] += unit.vector[2];
+     }
+ }
++    _mm_empty();
++}
+ 
+ static void
+ fbFetchTransformed_Convolution(bits_image_t * pict, int width, uint32_t *buffer, uint32_t *mask, uint32_t maskBits, pixman_bool_t affine, pixman_vector_t v, pixman_vector_t unit)
+ {
+     pixman_box16_t dummy;
+     fetchPixelProc fetch;
+     int i;
+ 
+@@ -561,16 +1271,57 @@ adjust (pixman_vector_t *v, pixman_vecto
+     
+     v->vector[0] += delta_v;
+     v->vector[1] += delta_v;
+     
+     u->vector[0] += delta_u;
+     u->vector[1] += delta_u;
+ }
+ 
++#ifdef PIXMAN_FB_ACCESSORS
++extern FASTCALL void fbFetch_a8r8g8b8 (bits_image_t *pict, int x, int y, int width, uint32_t *buffer);
++extern FASTCALL void fbFetch_x8r8g8b8 (bits_image_t *pict, int x, int y, int width, uint32_t *buffer);
++#else /* PIXMAN_FB_ACCESSORS */
++#define fbFetch_a8r8g8b8(pict, x, y, width, buffer) \
++    MEMCPY_WRAPPED((pict), (buffer), \
++    (const uint32_t *)((pict)->bits + (y)*(pict)->rowstride) + (x), \
++    (width)*sizeof(uint32_t))
++#define fbFetch_x8r8g8b8(pict, x, y, width, buffer) do { \
++    const uint32_t *bits = (pict)->bits + (y)*(pict)->rowstride; \
++    const uint32_t *pixel = (const uint32_t *)bits + (x); \
++    const uint32_t *end = pixel + (width); \
++    while (pixel < end) { \
++        *buffer++ = READ(pict, pixel++) | 0xff000000; \
++    } \
++} while (0)
++#endif /* PIXMAN_FB_ACCESSORS */
++
++#ifdef _MSC_VER
++__forceinline
++#else
++inline
++#endif
++static void fbFetch(bits_image_t * pict, int x, int y, int width, uint32_t *buffer, uint32_t *mask, uint32_t maskBits)
++{
++    switch (pict->format)
++    {
++    case PIXMAN_x8r8g8b8:
++        fbFetch_x8r8g8b8(pict, x, y, width, buffer);
++        break;
++
++    case PIXMAN_a8r8g8b8:
++        fbFetch_a8r8g8b8(pict, x, y, width, buffer);
++        break;
++
++    default:
++        (FETCH_PROC_FOR_PICTURE(pict))(pict, x, y, width, buffer);
++        break;
++    }
++}
++
+ void
+ FB_FETCH_TRANSFORMED(bits_image_t * pict, int x, int y, int width, uint32_t *buffer, uint32_t *mask, uint32_t maskBits)
+ {
+     uint32_t     *bits;
+     int32_t    stride;
+     pixman_vector_t v;
+     pixman_vector_t unit;
+     pixman_bool_t affine = TRUE;
+@@ -610,17 +1361,29 @@ FB_FETCH_TRANSFORMED(bits_image_t * pict
+ 	
+         if (pict->common.repeat == PIXMAN_REPEAT_NORMAL)
+         {
+             fbFetchTransformed_Nearest_Normal(pict, width, buffer, mask, maskBits, affine, v, unit);
+ 
+         }
+         else if (pict->common.repeat == PIXMAN_REPEAT_PAD)
+         {
+-            fbFetchTransformed_Nearest_Pad(pict, width, buffer, mask, maskBits, affine, v, unit);
++            if (!pict->common.transform &&
++                unit.vector[0] == pixman_fixed_1 &&
++                unit.vector[1] == 0 &&
++                unit.vector[2] == 0 &&
++                (v.vector[0]>>16) >= 0 && (v.vector[0]>>16) + width <= pict->width)
++            {
++                y = CLIP(y, 0, pict->height-1);
++                fbFetch(pict, x, y, width, buffer, mask, maskBits);
++            }
++            else
++            {
++                fbFetchTransformed_Nearest_Pad(pict, width, buffer, mask, maskBits, affine, v, unit);
++            }
+         }
+         else
+         {
+             fbFetchTransformed_Nearest_General(pict, width, buffer, mask, maskBits, affine, v, unit);
+         }
+     } else if (pict->common.filter == PIXMAN_FILTER_BILINEAR	||
+ 	       pict->common.filter == PIXMAN_FILTER_GOOD	||
+ 	       pict->common.filter == PIXMAN_FILTER_BEST)
+@@ -719,8 +1482,1230 @@ FB_STORE_EXTERNAL_ALPHA(bits_image_t * p
+     alpha_bits += (ay - pict->common.alpha_origin.y)*astride;
+ 
+ 
+     store((pixman_image_t *)pict, bits, buffer, x, width, indexed);
+     astore((pixman_image_t *)pict->common.alpha_map,
+ 	   alpha_bits, buffer, ax - pict->common.alpha_origin.x, width, aindexed);
+ }
+ 
++#if defined(_MSC_VER) && !defined(PIXMAN_FB_ACCESSORS)
++#define CASEMOD(b) case (b): return a % (b)
++int __fastcall MOD_TT(int a, int b)
++{
++  switch (b)
++  {
++  CASEMOD(1);
++  CASEMOD(2);
++  CASEMOD(3);
++  CASEMOD(4);
++  CASEMOD(5);
++  CASEMOD(6);
++  CASEMOD(7);
++  CASEMOD(8);
++  CASEMOD(9);
++  CASEMOD(10);
++
++  CASEMOD(11);
++  CASEMOD(12);
++  CASEMOD(13);
++  CASEMOD(14);
++  CASEMOD(15);
++  CASEMOD(16);
++  CASEMOD(17);
++  CASEMOD(18);
++  CASEMOD(19);
++  CASEMOD(20);
++
++  CASEMOD(21);
++  CASEMOD(22);
++  CASEMOD(23);
++  CASEMOD(24);
++  CASEMOD(25);
++  CASEMOD(26);
++  CASEMOD(27);
++  CASEMOD(28);
++  CASEMOD(29);
++  CASEMOD(30);
++
++  CASEMOD(31);
++  CASEMOD(32);
++  CASEMOD(33);
++  CASEMOD(34);
++  CASEMOD(35);
++  CASEMOD(36);
++  CASEMOD(37);
++  CASEMOD(38);
++  CASEMOD(39);
++  CASEMOD(40);
++
++  CASEMOD(41);
++  CASEMOD(42);
++  CASEMOD(43);
++  CASEMOD(44);
++  CASEMOD(45);
++  CASEMOD(46);
++  CASEMOD(47);
++  CASEMOD(48);
++  CASEMOD(49);
++  CASEMOD(50);
++
++  CASEMOD(51);
++  CASEMOD(52);
++  CASEMOD(53);
++  CASEMOD(54);
++  CASEMOD(55);
++  CASEMOD(56);
++  CASEMOD(57);
++  CASEMOD(58);
++  CASEMOD(59);
++  CASEMOD(60);
++
++  CASEMOD(61);
++  CASEMOD(62);
++  CASEMOD(63);
++  CASEMOD(64);
++  CASEMOD(65);
++  CASEMOD(66);
++  CASEMOD(67);
++  CASEMOD(68);
++  CASEMOD(69);
++  CASEMOD(70);
++
++  CASEMOD(71);
++  CASEMOD(72);
++  CASEMOD(73);
++  CASEMOD(74);
++  CASEMOD(75);
++  CASEMOD(76);
++  CASEMOD(77);
++  CASEMOD(78);
++  CASEMOD(79);
++  CASEMOD(80);
++
++  CASEMOD(81);
++  CASEMOD(82);
++  CASEMOD(83);
++  CASEMOD(84);
++  CASEMOD(85);
++  CASEMOD(86);
++  CASEMOD(87);
++  CASEMOD(88);
++  CASEMOD(89);
++  CASEMOD(90);
++
++  CASEMOD(91);
++  CASEMOD(92);
++  CASEMOD(93);
++  CASEMOD(94);
++  CASEMOD(95);
++  CASEMOD(96);
++  CASEMOD(97);
++  CASEMOD(98);
++  CASEMOD(99);
++  CASEMOD(100);
++
++  CASEMOD(101);
++  CASEMOD(102);
++  CASEMOD(103);
++  CASEMOD(104);
++  CASEMOD(105);
++  CASEMOD(106);
++  CASEMOD(107);
++  CASEMOD(108);
++  CASEMOD(109);
++  CASEMOD(110);
++
++  CASEMOD(111);
++  CASEMOD(112);
++  CASEMOD(113);
++  CASEMOD(114);
++  CASEMOD(115);
++  CASEMOD(116);
++  CASEMOD(117);
++  CASEMOD(118);
++  CASEMOD(119);
++  CASEMOD(120);
++
++  CASEMOD(121);
++  CASEMOD(122);
++  CASEMOD(123);
++  CASEMOD(124);
++  CASEMOD(125);
++  CASEMOD(126);
++  CASEMOD(127);
++  CASEMOD(128);
++  CASEMOD(129);
++  CASEMOD(130);
++
++  CASEMOD(131);
++  CASEMOD(132);
++  CASEMOD(133);
++  CASEMOD(134);
++  CASEMOD(135);
++  CASEMOD(136);
++  CASEMOD(137);
++  CASEMOD(138);
++  CASEMOD(139);
++  CASEMOD(140);
++
++  CASEMOD(141);
++  CASEMOD(142);
++  CASEMOD(143);
++  CASEMOD(144);
++  CASEMOD(145);
++  CASEMOD(146);
++  CASEMOD(147);
++  CASEMOD(148);
++  CASEMOD(149);
++  CASEMOD(150);
++
++  CASEMOD(151);
++  CASEMOD(152);
++  CASEMOD(153);
++  CASEMOD(154);
++  CASEMOD(155);
++  CASEMOD(156);
++  CASEMOD(157);
++  CASEMOD(158);
++  CASEMOD(159);
++  CASEMOD(160);
++
++  CASEMOD(161);
++  CASEMOD(162);
++  CASEMOD(163);
++  CASEMOD(164);
++  CASEMOD(165);
++  CASEMOD(166);
++  CASEMOD(167);
++  CASEMOD(168);
++  CASEMOD(169);
++  CASEMOD(170);
++
++  CASEMOD(171);
++  CASEMOD(172);
++  CASEMOD(173);
++  CASEMOD(174);
++  CASEMOD(175);
++  CASEMOD(176);
++  CASEMOD(177);
++  CASEMOD(178);
++  CASEMOD(179);
++  CASEMOD(180);
++
++  CASEMOD(181);
++  CASEMOD(182);
++  CASEMOD(183);
++  CASEMOD(184);
++  CASEMOD(185);
++  CASEMOD(186);
++  CASEMOD(187);
++  CASEMOD(188);
++  CASEMOD(189);
++  CASEMOD(190);
++
++  CASEMOD(191);
++  CASEMOD(192);
++  CASEMOD(193);
++  CASEMOD(194);
++  CASEMOD(195);
++  CASEMOD(196);
++  CASEMOD(197);
++  CASEMOD(198);
++  CASEMOD(199);
++  CASEMOD(200);
++
++  CASEMOD(201);
++  CASEMOD(202);
++  CASEMOD(203);
++  CASEMOD(204);
++  CASEMOD(205);
++  CASEMOD(206);
++  CASEMOD(207);
++  CASEMOD(208);
++  CASEMOD(209);
++  CASEMOD(210);
++
++  CASEMOD(211);
++  CASEMOD(212);
++  CASEMOD(213);
++  CASEMOD(214);
++  CASEMOD(215);
++  CASEMOD(216);
++  CASEMOD(217);
++  CASEMOD(218);
++  CASEMOD(219);
++  CASEMOD(220);
++
++  CASEMOD(221);
++  CASEMOD(222);
++  CASEMOD(223);
++  CASEMOD(224);
++  CASEMOD(225);
++  CASEMOD(226);
++  CASEMOD(227);
++  CASEMOD(228);
++  CASEMOD(229);
++  CASEMOD(230);
++
++  CASEMOD(231);
++  CASEMOD(232);
++  CASEMOD(233);
++  CASEMOD(234);
++  CASEMOD(235);
++  CASEMOD(236);
++  CASEMOD(237);
++  CASEMOD(238);
++  CASEMOD(239);
++  CASEMOD(240);
++
++  CASEMOD(241);
++  CASEMOD(242);
++  CASEMOD(243);
++  CASEMOD(244);
++  CASEMOD(245);
++  CASEMOD(246);
++  CASEMOD(247);
++  CASEMOD(248);
++  CASEMOD(249);
++  CASEMOD(250);
++
++  CASEMOD(251);
++  CASEMOD(252);
++  CASEMOD(253);
++  CASEMOD(254);
++  CASEMOD(255);
++  CASEMOD(256);
++  CASEMOD(257);
++  CASEMOD(258);
++  CASEMOD(259);
++  CASEMOD(260);
++
++  CASEMOD(261);
++  CASEMOD(262);
++  CASEMOD(263);
++  CASEMOD(264);
++  CASEMOD(265);
++  CASEMOD(266);
++  CASEMOD(267);
++  CASEMOD(268);
++  CASEMOD(269);
++  CASEMOD(270);
++
++  CASEMOD(271);
++  CASEMOD(272);
++  CASEMOD(273);
++  CASEMOD(274);
++  CASEMOD(275);
++  CASEMOD(276);
++  CASEMOD(277);
++  CASEMOD(278);
++  CASEMOD(279);
++  CASEMOD(280);
++
++  CASEMOD(281);
++  CASEMOD(282);
++  CASEMOD(283);
++  CASEMOD(284);
++  CASEMOD(285);
++  CASEMOD(286);
++  CASEMOD(287);
++  CASEMOD(288);
++  CASEMOD(289);
++  CASEMOD(290);
++
++  CASEMOD(291);
++  CASEMOD(292);
++  CASEMOD(293);
++  CASEMOD(294);
++  CASEMOD(295);
++  CASEMOD(296);
++  CASEMOD(297);
++  CASEMOD(298);
++  CASEMOD(299);
++  CASEMOD(300);
++
++  CASEMOD(301);
++  CASEMOD(302);
++  CASEMOD(303);
++  CASEMOD(304);
++  CASEMOD(305);
++  CASEMOD(306);
++  CASEMOD(307);
++  CASEMOD(308);
++  CASEMOD(309);
++  CASEMOD(310);
++
++  CASEMOD(311);
++  CASEMOD(312);
++  CASEMOD(313);
++  CASEMOD(314);
++  CASEMOD(315);
++  CASEMOD(316);
++  CASEMOD(317);
++  CASEMOD(318);
++  CASEMOD(319);
++  CASEMOD(320);
++
++  CASEMOD(321);
++  CASEMOD(322);
++  CASEMOD(323);
++  CASEMOD(324);
++  CASEMOD(325);
++  CASEMOD(326);
++  CASEMOD(327);
++  CASEMOD(328);
++  CASEMOD(329);
++  CASEMOD(330);
++
++  CASEMOD(331);
++  CASEMOD(332);
++  CASEMOD(333);
++  CASEMOD(334);
++  CASEMOD(335);
++  CASEMOD(336);
++  CASEMOD(337);
++  CASEMOD(338);
++  CASEMOD(339);
++  CASEMOD(340);
++
++  CASEMOD(341);
++  CASEMOD(342);
++  CASEMOD(343);
++  CASEMOD(344);
++  CASEMOD(345);
++  CASEMOD(346);
++  CASEMOD(347);
++  CASEMOD(348);
++  CASEMOD(349);
++  CASEMOD(350);
++
++  CASEMOD(351);
++  CASEMOD(352);
++  CASEMOD(353);
++  CASEMOD(354);
++  CASEMOD(355);
++  CASEMOD(356);
++  CASEMOD(357);
++  CASEMOD(358);
++  CASEMOD(359);
++  CASEMOD(360);
++
++  CASEMOD(361);
++  CASEMOD(362);
++  CASEMOD(363);
++  CASEMOD(364);
++  CASEMOD(365);
++  CASEMOD(366);
++  CASEMOD(367);
++  CASEMOD(368);
++  CASEMOD(369);
++  CASEMOD(370);
++
++  CASEMOD(371);
++  CASEMOD(372);
++  CASEMOD(373);
++  CASEMOD(374);
++  CASEMOD(375);
++  CASEMOD(376);
++  CASEMOD(377);
++  CASEMOD(378);
++  CASEMOD(379);
++  CASEMOD(380);
++
++  CASEMOD(381);
++  CASEMOD(382);
++  CASEMOD(383);
++  CASEMOD(384);
++  CASEMOD(385);
++  CASEMOD(386);
++  CASEMOD(387);
++  CASEMOD(388);
++  CASEMOD(389);
++  CASEMOD(390);
++
++  CASEMOD(391);
++  CASEMOD(392);
++  CASEMOD(393);
++  CASEMOD(394);
++  CASEMOD(395);
++  CASEMOD(396);
++  CASEMOD(397);
++  CASEMOD(398);
++  CASEMOD(399);
++  CASEMOD(400);
++
++  CASEMOD(401);
++  CASEMOD(402);
++  CASEMOD(403);
++  CASEMOD(404);
++  CASEMOD(405);
++  CASEMOD(406);
++  CASEMOD(407);
++  CASEMOD(408);
++  CASEMOD(409);
++  CASEMOD(410);
++
++  CASEMOD(411);
++  CASEMOD(412);
++  CASEMOD(413);
++  CASEMOD(414);
++  CASEMOD(415);
++  CASEMOD(416);
++  CASEMOD(417);
++  CASEMOD(418);
++  CASEMOD(419);
++  CASEMOD(420);
++
++  CASEMOD(421);
++  CASEMOD(422);
++  CASEMOD(423);
++  CASEMOD(424);
++  CASEMOD(425);
++  CASEMOD(426);
++  CASEMOD(427);
++  CASEMOD(428);
++  CASEMOD(429);
++  CASEMOD(430);
++
++  CASEMOD(431);
++  CASEMOD(432);
++  CASEMOD(433);
++  CASEMOD(434);
++  CASEMOD(435);
++  CASEMOD(436);
++  CASEMOD(437);
++  CASEMOD(438);
++  CASEMOD(439);
++  CASEMOD(440);
++
++  CASEMOD(441);
++  CASEMOD(442);
++  CASEMOD(443);
++  CASEMOD(444);
++  CASEMOD(445);
++  CASEMOD(446);
++  CASEMOD(447);
++  CASEMOD(448);
++  CASEMOD(449);
++  CASEMOD(450);
++
++  CASEMOD(451);
++  CASEMOD(452);
++  CASEMOD(453);
++  CASEMOD(454);
++  CASEMOD(455);
++  CASEMOD(456);
++  CASEMOD(457);
++  CASEMOD(458);
++  CASEMOD(459);
++  CASEMOD(460);
++
++  CASEMOD(461);
++  CASEMOD(462);
++  CASEMOD(463);
++  CASEMOD(464);
++  CASEMOD(465);
++  CASEMOD(466);
++  CASEMOD(467);
++  CASEMOD(468);
++  CASEMOD(469);
++  CASEMOD(470);
++
++  CASEMOD(471);
++  CASEMOD(472);
++  CASEMOD(473);
++  CASEMOD(474);
++  CASEMOD(475);
++  CASEMOD(476);
++  CASEMOD(477);
++  CASEMOD(478);
++  CASEMOD(479);
++  CASEMOD(480);
++
++  CASEMOD(481);
++  CASEMOD(482);
++  CASEMOD(483);
++  CASEMOD(484);
++  CASEMOD(485);
++  CASEMOD(486);
++  CASEMOD(487);
++  CASEMOD(488);
++  CASEMOD(489);
++  CASEMOD(490);
++
++  CASEMOD(491);
++  CASEMOD(492);
++  CASEMOD(493);
++  CASEMOD(494);
++  CASEMOD(495);
++  CASEMOD(496);
++  CASEMOD(497);
++  CASEMOD(498);
++  CASEMOD(499);
++  CASEMOD(500);
++
++  CASEMOD(501);
++  CASEMOD(502);
++  CASEMOD(503);
++  CASEMOD(504);
++  CASEMOD(505);
++  CASEMOD(506);
++  CASEMOD(507);
++  CASEMOD(508);
++  CASEMOD(509);
++  CASEMOD(510);
++
++  CASEMOD(511);
++  CASEMOD(512);
++  CASEMOD(513);
++  CASEMOD(514);
++  CASEMOD(515);
++  CASEMOD(516);
++  CASEMOD(517);
++  CASEMOD(518);
++  CASEMOD(519);
++  CASEMOD(520);
++
++  CASEMOD(521);
++  CASEMOD(522);
++  CASEMOD(523);
++  CASEMOD(524);
++  CASEMOD(525);
++  CASEMOD(526);
++  CASEMOD(527);
++  CASEMOD(528);
++  CASEMOD(529);
++  CASEMOD(530);
++
++  CASEMOD(531);
++  CASEMOD(532);
++  CASEMOD(533);
++  CASEMOD(534);
++  CASEMOD(535);
++  CASEMOD(536);
++  CASEMOD(537);
++  CASEMOD(538);
++  CASEMOD(539);
++  CASEMOD(540);
++
++  CASEMOD(541);
++  CASEMOD(542);
++  CASEMOD(543);
++  CASEMOD(544);
++  CASEMOD(545);
++  CASEMOD(546);
++  CASEMOD(547);
++  CASEMOD(548);
++  CASEMOD(549);
++  CASEMOD(550);
++
++  CASEMOD(551);
++  CASEMOD(552);
++  CASEMOD(553);
++  CASEMOD(554);
++  CASEMOD(555);
++  CASEMOD(556);
++  CASEMOD(557);
++  CASEMOD(558);
++  CASEMOD(559);
++  CASEMOD(560);
++
++  CASEMOD(561);
++  CASEMOD(562);
++  CASEMOD(563);
++  CASEMOD(564);
++  CASEMOD(565);
++  CASEMOD(566);
++  CASEMOD(567);
++  CASEMOD(568);
++  CASEMOD(569);
++  CASEMOD(570);
++
++  CASEMOD(571);
++  CASEMOD(572);
++  CASEMOD(573);
++  CASEMOD(574);
++  CASEMOD(575);
++  CASEMOD(576);
++  CASEMOD(577);
++  CASEMOD(578);
++  CASEMOD(579);
++  CASEMOD(580);
++
++  CASEMOD(581);
++  CASEMOD(582);
++  CASEMOD(583);
++  CASEMOD(584);
++  CASEMOD(585);
++  CASEMOD(586);
++  CASEMOD(587);
++  CASEMOD(588);
++  CASEMOD(589);
++  CASEMOD(590);
++
++  CASEMOD(591);
++  CASEMOD(592);
++  CASEMOD(593);
++  CASEMOD(594);
++  CASEMOD(595);
++  CASEMOD(596);
++  CASEMOD(597);
++  CASEMOD(598);
++  CASEMOD(599);
++  CASEMOD(600);
++
++  CASEMOD(601);
++  CASEMOD(602);
++  CASEMOD(603);
++  CASEMOD(604);
++  CASEMOD(605);
++  CASEMOD(606);
++  CASEMOD(607);
++  CASEMOD(608);
++  CASEMOD(609);
++  CASEMOD(610);
++
++  CASEMOD(611);
++  CASEMOD(612);
++  CASEMOD(613);
++  CASEMOD(614);
++  CASEMOD(615);
++  CASEMOD(616);
++  CASEMOD(617);
++  CASEMOD(618);
++  CASEMOD(619);
++  CASEMOD(620);
++
++  CASEMOD(621);
++  CASEMOD(622);
++  CASEMOD(623);
++  CASEMOD(624);
++  CASEMOD(625);
++  CASEMOD(626);
++  CASEMOD(627);
++  CASEMOD(628);
++  CASEMOD(629);
++  CASEMOD(630);
++
++  CASEMOD(631);
++  CASEMOD(632);
++  CASEMOD(633);
++  CASEMOD(634);
++  CASEMOD(635);
++  CASEMOD(636);
++  CASEMOD(637);
++  CASEMOD(638);
++  CASEMOD(639);
++  CASEMOD(640);
++
++  CASEMOD(641);
++  CASEMOD(642);
++  CASEMOD(643);
++  CASEMOD(644);
++  CASEMOD(645);
++  CASEMOD(646);
++  CASEMOD(647);
++  CASEMOD(648);
++  CASEMOD(649);
++  CASEMOD(650);
++
++  CASEMOD(651);
++  CASEMOD(652);
++  CASEMOD(653);
++  CASEMOD(654);
++  CASEMOD(655);
++  CASEMOD(656);
++  CASEMOD(657);
++  CASEMOD(658);
++  CASEMOD(659);
++  CASEMOD(660);
++
++  CASEMOD(661);
++  CASEMOD(662);
++  CASEMOD(663);
++  CASEMOD(664);
++  CASEMOD(665);
++  CASEMOD(666);
++  CASEMOD(667);
++  CASEMOD(668);
++  CASEMOD(669);
++  CASEMOD(670);
++
++  CASEMOD(671);
++  CASEMOD(672);
++  CASEMOD(673);
++  CASEMOD(674);
++  CASEMOD(675);
++  CASEMOD(676);
++  CASEMOD(677);
++  CASEMOD(678);
++  CASEMOD(679);
++  CASEMOD(680);
++
++  CASEMOD(681);
++  CASEMOD(682);
++  CASEMOD(683);
++  CASEMOD(684);
++  CASEMOD(685);
++  CASEMOD(686);
++  CASEMOD(687);
++  CASEMOD(688);
++  CASEMOD(689);
++  CASEMOD(690);
++
++  CASEMOD(691);
++  CASEMOD(692);
++  CASEMOD(693);
++  CASEMOD(694);
++  CASEMOD(695);
++  CASEMOD(696);
++  CASEMOD(697);
++  CASEMOD(698);
++  CASEMOD(699);
++  CASEMOD(700);
++
++  CASEMOD(701);
++  CASEMOD(702);
++  CASEMOD(703);
++  CASEMOD(704);
++  CASEMOD(705);
++  CASEMOD(706);
++  CASEMOD(707);
++  CASEMOD(708);
++  CASEMOD(709);
++  CASEMOD(710);
++
++  CASEMOD(711);
++  CASEMOD(712);
++  CASEMOD(713);
++  CASEMOD(714);
++  CASEMOD(715);
++  CASEMOD(716);
++  CASEMOD(717);
++  CASEMOD(718);
++  CASEMOD(719);
++  CASEMOD(720);
++
++  CASEMOD(721);
++  CASEMOD(722);
++  CASEMOD(723);
++  CASEMOD(724);
++  CASEMOD(725);
++  CASEMOD(726);
++  CASEMOD(727);
++  CASEMOD(728);
++  CASEMOD(729);
++  CASEMOD(730);
++
++  CASEMOD(731);
++  CASEMOD(732);
++  CASEMOD(733);
++  CASEMOD(734);
++  CASEMOD(735);
++  CASEMOD(736);
++  CASEMOD(737);
++  CASEMOD(738);
++  CASEMOD(739);
++  CASEMOD(740);
++
++  CASEMOD(741);
++  CASEMOD(742);
++  CASEMOD(743);
++  CASEMOD(744);
++  CASEMOD(745);
++  CASEMOD(746);
++  CASEMOD(747);
++  CASEMOD(748);
++  CASEMOD(749);
++  CASEMOD(750);
++
++  CASEMOD(751);
++  CASEMOD(752);
++  CASEMOD(753);
++  CASEMOD(754);
++  CASEMOD(755);
++  CASEMOD(756);
++  CASEMOD(757);
++  CASEMOD(758);
++  CASEMOD(759);
++  CASEMOD(760);
++
++  CASEMOD(761);
++  CASEMOD(762);
++  CASEMOD(763);
++  CASEMOD(764);
++  CASEMOD(765);
++  CASEMOD(766);
++  CASEMOD(767);
++  CASEMOD(768);
++  CASEMOD(769);
++  CASEMOD(770);
++
++  CASEMOD(771);
++  CASEMOD(772);
++  CASEMOD(773);
++  CASEMOD(774);
++  CASEMOD(775);
++  CASEMOD(776);
++  CASEMOD(777);
++  CASEMOD(778);
++  CASEMOD(779);
++  CASEMOD(780);
++
++  CASEMOD(781);
++  CASEMOD(782);
++  CASEMOD(783);
++  CASEMOD(784);
++  CASEMOD(785);
++  CASEMOD(786);
++  CASEMOD(787);
++  CASEMOD(788);
++  CASEMOD(789);
++  CASEMOD(790);
++
++  CASEMOD(791);
++  CASEMOD(792);
++  CASEMOD(793);
++  CASEMOD(794);
++  CASEMOD(795);
++  CASEMOD(796);
++  CASEMOD(797);
++  CASEMOD(798);
++  CASEMOD(799);
++  CASEMOD(800);
++
++  CASEMOD(801);
++  CASEMOD(802);
++  CASEMOD(803);
++  CASEMOD(804);
++  CASEMOD(805);
++  CASEMOD(806);
++  CASEMOD(807);
++  CASEMOD(808);
++  CASEMOD(809);
++  CASEMOD(810);
++
++  CASEMOD(811);
++  CASEMOD(812);
++  CASEMOD(813);
++  CASEMOD(814);
++  CASEMOD(815);
++  CASEMOD(816);
++  CASEMOD(817);
++  CASEMOD(818);
++  CASEMOD(819);
++  CASEMOD(820);
++
++  CASEMOD(821);
++  CASEMOD(822);
++  CASEMOD(823);
++  CASEMOD(824);
++  CASEMOD(825);
++  CASEMOD(826);
++  CASEMOD(827);
++  CASEMOD(828);
++  CASEMOD(829);
++  CASEMOD(830);
++
++  CASEMOD(831);
++  CASEMOD(832);
++  CASEMOD(833);
++  CASEMOD(834);
++  CASEMOD(835);
++  CASEMOD(836);
++  CASEMOD(837);
++  CASEMOD(838);
++  CASEMOD(839);
++  CASEMOD(840);
++
++  CASEMOD(841);
++  CASEMOD(842);
++  CASEMOD(843);
++  CASEMOD(844);
++  CASEMOD(845);
++  CASEMOD(846);
++  CASEMOD(847);
++  CASEMOD(848);
++  CASEMOD(849);
++  CASEMOD(850);
++
++  CASEMOD(851);
++  CASEMOD(852);
++  CASEMOD(853);
++  CASEMOD(854);
++  CASEMOD(855);
++  CASEMOD(856);
++  CASEMOD(857);
++  CASEMOD(858);
++  CASEMOD(859);
++  CASEMOD(860);
++
++  CASEMOD(861);
++  CASEMOD(862);
++  CASEMOD(863);
++  CASEMOD(864);
++  CASEMOD(865);
++  CASEMOD(866);
++  CASEMOD(867);
++  CASEMOD(868);
++  CASEMOD(869);
++  CASEMOD(870);
++
++  CASEMOD(871);
++  CASEMOD(872);
++  CASEMOD(873);
++  CASEMOD(874);
++  CASEMOD(875);
++  CASEMOD(876);
++  CASEMOD(877);
++  CASEMOD(878);
++  CASEMOD(879);
++  CASEMOD(880);
++
++  CASEMOD(881);
++  CASEMOD(882);
++  CASEMOD(883);
++  CASEMOD(884);
++  CASEMOD(885);
++  CASEMOD(886);
++  CASEMOD(887);
++  CASEMOD(888);
++  CASEMOD(889);
++  CASEMOD(890);
++
++  CASEMOD(891);
++  CASEMOD(892);
++  CASEMOD(893);
++  CASEMOD(894);
++  CASEMOD(895);
++  CASEMOD(896);
++  CASEMOD(897);
++  CASEMOD(898);
++  CASEMOD(899);
++  CASEMOD(900);
++
++  CASEMOD(901);
++  CASEMOD(902);
++  CASEMOD(903);
++  CASEMOD(904);
++  CASEMOD(905);
++  CASEMOD(906);
++  CASEMOD(907);
++  CASEMOD(908);
++  CASEMOD(909);
++  CASEMOD(910);
++
++  CASEMOD(911);
++  CASEMOD(912);
++  CASEMOD(913);
++  CASEMOD(914);
++  CASEMOD(915);
++  CASEMOD(916);
++  CASEMOD(917);
++  CASEMOD(918);
++  CASEMOD(919);
++  CASEMOD(920);
++
++  CASEMOD(921);
++  CASEMOD(922);
++  CASEMOD(923);
++  CASEMOD(924);
++  CASEMOD(925);
++  CASEMOD(926);
++  CASEMOD(927);
++  CASEMOD(928);
++  CASEMOD(929);
++  CASEMOD(930);
++
++  CASEMOD(931);
++  CASEMOD(932);
++  CASEMOD(933);
++  CASEMOD(934);
++  CASEMOD(935);
++  CASEMOD(936);
++  CASEMOD(937);
++  CASEMOD(938);
++  CASEMOD(939);
++  CASEMOD(940);
++
++  CASEMOD(941);
++  CASEMOD(942);
++  CASEMOD(943);
++  CASEMOD(944);
++  CASEMOD(945);
++  CASEMOD(946);
++  CASEMOD(947);
++  CASEMOD(948);
++  CASEMOD(949);
++  CASEMOD(950);
++
++  CASEMOD(951);
++  CASEMOD(952);
++  CASEMOD(953);
++  CASEMOD(954);
++  CASEMOD(955);
++  CASEMOD(956);
++  CASEMOD(957);
++  CASEMOD(958);
++  CASEMOD(959);
++  CASEMOD(960);
++
++  CASEMOD(961);
++  CASEMOD(962);
++  CASEMOD(963);
++  CASEMOD(964);
++  CASEMOD(965);
++  CASEMOD(966);
++  CASEMOD(967);
++  CASEMOD(968);
++  CASEMOD(969);
++  CASEMOD(970);
++
++  CASEMOD(971);
++  CASEMOD(972);
++  CASEMOD(973);
++  CASEMOD(974);
++  CASEMOD(975);
++  CASEMOD(976);
++  CASEMOD(977);
++  CASEMOD(978);
++  CASEMOD(979);
++  CASEMOD(980);
++
++  CASEMOD(981);
++  CASEMOD(982);
++  CASEMOD(983);
++  CASEMOD(984);
++  CASEMOD(985);
++  CASEMOD(986);
++  CASEMOD(987);
++  CASEMOD(988);
++  CASEMOD(989);
++  CASEMOD(990);
++
++  CASEMOD(991);
++  CASEMOD(992);
++  CASEMOD(993);
++  CASEMOD(994);
++  CASEMOD(995);
++  CASEMOD(996);
++  CASEMOD(997);
++  CASEMOD(998);
++  CASEMOD(999);
++  CASEMOD(1000);
++
++  CASEMOD(1001);
++  CASEMOD(1002);
++  CASEMOD(1003);
++  CASEMOD(1004);
++  CASEMOD(1005);
++  CASEMOD(1006);
++  CASEMOD(1007);
++  CASEMOD(1008);
++  CASEMOD(1009);
++  CASEMOD(1010);
++
++  CASEMOD(1011);
++  CASEMOD(1012);
++  CASEMOD(1013);
++  CASEMOD(1014);
++  CASEMOD(1015);
++  CASEMOD(1016);
++  CASEMOD(1017);
++  CASEMOD(1018);
++  CASEMOD(1019);
++  CASEMOD(1020);
++
++  CASEMOD(1021);
++  CASEMOD(1022);
++  CASEMOD(1023);
++  CASEMOD(1024);
++  CASEMOD(1025);
++  CASEMOD(1026);
++  CASEMOD(1027);
++  CASEMOD(1028);
++  CASEMOD(1029);
++  CASEMOD(1030);
++
++  CASEMOD(1031);
++  CASEMOD(1032);
++  CASEMOD(1033);
++  CASEMOD(1034);
++  CASEMOD(1035);
++  CASEMOD(1036);
++  CASEMOD(1037);
++  CASEMOD(1038);
++  CASEMOD(1039);
++  CASEMOD(1040);
++
++  CASEMOD(1041);
++  CASEMOD(1042);
++  CASEMOD(1043);
++  CASEMOD(1044);
++  CASEMOD(1045);
++  CASEMOD(1046);
++  CASEMOD(1047);
++  CASEMOD(1048);
++  CASEMOD(1049);
++  CASEMOD(1050);
++
++  CASEMOD(1051);
++  CASEMOD(1052);
++  CASEMOD(1053);
++  CASEMOD(1054);
++  CASEMOD(1055);
++  CASEMOD(1056);
++  CASEMOD(1057);
++  CASEMOD(1058);
++  CASEMOD(1059);
++  CASEMOD(1060);
++
++  CASEMOD(1061);
++  CASEMOD(1062);
++  CASEMOD(1063);
++  CASEMOD(1064);
++  CASEMOD(1065);
++  CASEMOD(1066);
++  CASEMOD(1067);
++  CASEMOD(1068);
++  CASEMOD(1069);
++  CASEMOD(1070);
++
++  CASEMOD(1071);
++  CASEMOD(1072);
++  CASEMOD(1073);
++  CASEMOD(1074);
++  CASEMOD(1075);
++  CASEMOD(1076);
++  CASEMOD(1077);
++  CASEMOD(1078);
++  CASEMOD(1079);
++  CASEMOD(1080);
++
++  CASEMOD(1081);
++  CASEMOD(1082);
++  CASEMOD(1083);
++  CASEMOD(1084);
++  CASEMOD(1085);
++  CASEMOD(1086);
++  CASEMOD(1087);
++  CASEMOD(1088);
++  CASEMOD(1089);
++  CASEMOD(1090);
++
++  CASEMOD(1091);
++  CASEMOD(1092);
++  CASEMOD(1093);
++  CASEMOD(1094);
++  CASEMOD(1095);
++  CASEMOD(1096);
++  CASEMOD(1097);
++  CASEMOD(1098);
++  CASEMOD(1099);
++  CASEMOD(1100);
++
++  default:
++    return a % b;
++  }
++}
++#endif
++

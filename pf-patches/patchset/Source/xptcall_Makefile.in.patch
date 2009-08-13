@@ -1,0 +1,27 @@
+Index: xpcom/reflect/xptcall/src/md/win32/Makefile.in
+===================================================================
+RCS file: /cvsroot/mozilla/xpcom/reflect/xptcall/src/md/win32/Makefile.in,v
+retrieving revision 1.19
+diff -u -8 -p -r1.19 Makefile.in
+--- xpcom/reflect/xptcall/src/md/win32/Makefile.in	19 Jan 2008 01:12:32 -0000	1.19
++++ xpcom/reflect/xptcall/src/md/win32/Makefile.in	1 Mar 2008 05:33:06 -0000
+@@ -53,19 +53,16 @@ ifdef GNU_CXX
+ CPPSRCS		= \
+ 		../unix/xptcinvoke_gcc_x86_unix.cpp \
+ 		xptcstubs.cpp \
+ 		$(NULL)
+ LOCAL_INCLUDES	= -I$(srcdir)/../unix
+ DEFINES		+= -DMOZ_USE_STDCALL -DMOZ_NEED_LEADING_UNDERSCORE
+ else
+ 
+-# FIXME: bug 413019
+-OS_COMPILE_CXXFLAGS += -GL-
+-
+ CPPSRCS		= xptcinvoke.cpp xptcstubs.cpp
+ 
+ endif
+ 
+ REQUIRES = string
+ 
+ LOCAL_INCLUDES += -I$(srcdir)/../../../../xptinfo/src
+ 

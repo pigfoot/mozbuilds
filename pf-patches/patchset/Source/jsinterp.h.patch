@@ -1,0 +1,49 @@
+Index: js/src/jsinterp.h
+===================================================================
+RCS file: /cvsroot/mozilla/js/src/jsinterp.h,v
+retrieving revision 3.93
+diff -u -8 -p -r3.93 jsinterp.h
+--- js/src/jsinterp.h	29 Apr 2008 21:17:11 -0000	3.93
++++ js/src/jsinterp.h	12 May 2008 10:12:48 -0000
+@@ -344,16 +344,20 @@ js_FreeRawStack(JSContext *cx, void *mar
+ 
+ /*
+  * Refresh and return fp->scopeChain.  It may be stale if block scopes are
+  * active but not yet reflected by objects in the scope chain.  If a block
+  * scope contains a with, eval, XML filtering predicate, or similar such
+  * dynamically scoped construct, then compile-time block scope at fp->blocks
+  * must reflect at runtime.
+  */
++#ifdef _MSC_VER
++/* huck to avoid the bug of PGO */
++__declspec(dllexport)
++#endif
+ extern JSObject *
+ js_GetScopeChain(JSContext *cx, JSStackFrame *fp);
+ 
+ /*
+  * Given a context and a vector of [callee, this, args...] for a function that
+  * was specified with a JSFUN_THISP_PRIMITIVE flag, get the primitive value of
+  * |this| into *thisvp. In doing so, if |this| is an object, insist it is an
+  * instance of clasp and extract its private slot value to return via *thisvp.
+@@ -457,16 +461,20 @@ js_Execute(JSContext *cx, JSObject *chai
+ extern JSBool
+ js_InvokeConstructor(JSContext *cx, uintN argc, jsval *vp);
+ 
+ extern JSBool
+ js_Interpret(JSContext *cx);
+ 
+ #define JSPROP_INITIALIZER 0x100   /* NB: Not a valid property attribute. */
+ 
++#ifdef _MSC_VER
++/* huck to avoid the bug of PGO */
++__declspec(dllexport)
++#endif
+ extern JSBool
+ js_CheckRedeclaration(JSContext *cx, JSObject *obj, jsid id, uintN attrs,
+                       JSObject **objp, JSProperty **propp);
+ 
+ extern JSBool
+ js_StrictlyEqual(JSContext *cx, jsval lval, jsval rval);
+ 
+ extern JSBool

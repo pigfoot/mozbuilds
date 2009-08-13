@@ -1,0 +1,20 @@
+Index: xpcom/typelib/xpidl/Makefile.in
+===================================================================
+RCS file: /cvsroot/mozilla/xpcom/typelib/xpidl/Makefile.in,v
+retrieving revision 1.45
+diff -u -8 -p -r1.45 Makefile.in
+--- xpcom/typelib/xpidl/Makefile.in	28 May 2008 18:42:32 -0000	1.45
++++ xpcom/typelib/xpidl/Makefile.in	4 Jun 2008 20:37:01 -0000
+@@ -184,10 +184,12 @@ HOST_CFLAGS +=  -DEXPORT_XPT_API
+ # HOST_CFLAGS	+= /MD
+ LDFLAGS += -NODEFAULTLIB:MSVCRT
+ HOST_LIBS += Advapi32.lib
+ HOST_CFLAGS +=-D_X86_
+ endif
+ 
+ endif
+ 
++LDFLAGS := $(filter-out -LTCG:PGI -LTCG:PGINSTRUMENT -LTCG:PGU -LTCG:PGUPDATE -LTCG:PGO -LTCG:PGOPTIMIZE,$(LDFLAGS))
++
+ export::
+ 	@$(MAKE) libs

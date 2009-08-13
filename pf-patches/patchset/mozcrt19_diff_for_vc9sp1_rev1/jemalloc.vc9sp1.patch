@@ -1,0 +1,32 @@
+--- mozilla/memory/jemalloc/Makefile.in.BAK	2008-05-08 17:20:45.000000000 +0800
++++ mozilla/memory/jemalloc/Makefile.in	2008-12-27 13:36:28.906250000 +0800
+@@ -55,16 +55,18 @@
+ 	$(INSTALL) $< $(FINAL_TARGET)
+ 
+ # patch if necessary
+-$(CRT_OBJ_DIR)/jemalloc.c: $(srcdir)/crtsp1.diff
++$(CRT_OBJ_DIR)/jemalloc.c: $(srcdir)/crtvc9sp1.diff
+ 	rm -rf $(CRT_OBJ_DIR)
+ 	cp -R "$(WIN32_CRT_SRC_DIR)" .
+ 	# per http://forums.microsoft.com/MSDN/ShowPost.aspx?PostID=1189363&SiteID=1
+-	for i in dll mt xdll xmt; do \
+-	  pushd $(CRT_OBJ_DIR)/intel/$${i}_lib && lib -extract:..\\build\\intel\\$${i}_obj\\unhandld.obj eh.lib && popd; \
+-	done
++	#for i in dll mt xdll xmt; do \
++	#  pushd $(CRT_OBJ_DIR)/intel/$${i}_lib && lib -extract:..\\build\\intel\\$${i}_obj\\unhandld.obj eh.lib && popd; \
++	#done
+ 	# truly awful
+ 	#XXX: get ed into mozillabuild, bug 415123
+-	$(PERL) $(srcdir)/apply-ed-patches.pl $(srcdir)/crtsp1.diff \
++	#$(PERL) $(srcdir)/apply-ed-patches.pl $(srcdir)/crtsp1.diff \
++	# for VC9 SP1 crt : see bug 416117
++	$(PERL) $(srcdir)/apply-ed-patches.pl $(srcdir)/crtvc9sp1.diff \
+ 	$(CRT_OBJ_DIR) $(srcdir)/ed.exe
+ 
+ $(CRT_OBJ_DIR)/build/intel/mozcrt19.dll: \
+@@ -109,3 +109,5 @@
+ ifeq (Darwin,$(OS_TARGET))
+ LDFLAGS += -init _jemalloc_darwin_init
+ endif
++
++LDFLAGS := $(filter-out -LTCG:PGI -LTCG:PGINSTRUMENT -LTCG:PGU -LTCG:PGUPDATE -LTCG:PGO -LTCG:PGOPTIMIZE,$(LDFLAGS))

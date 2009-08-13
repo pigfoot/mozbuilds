@@ -1,0 +1,89 @@
+Index: gfx/cairo/libpixman/src/Makefile.in
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/cairo/libpixman/src/Makefile.in,v
+retrieving revision 1.35
+diff -u -8 -p -r1.35 Makefile.in
+--- gfx/cairo/libpixman/src/Makefile.in	7 Apr 2008 05:07:39 -0000	1.35
++++ gfx/cairo/libpixman/src/Makefile.in	10 Oct 2008 14:37:07 -0000
+@@ -41,39 +41,40 @@ DEPTH		= ../../../..
+ topsrcdir	= @top_srcdir@
+ srcdir		= @srcdir@
+ VPATH		= @srcdir@
+ 
+ include $(DEPTH)/config/autoconf.mk
+ 
+ MODULE		= libpixman
+ LIBRARY_NAME	= mozlibpixman
++ifeq (,$(filter /DTT_MEMUTIL -DTT_MEMUTIL,$(CL)))
+ LIBXUL_LIBRARY = 1
++endif
+ 
+ ifndef MOZ_ENABLE_LIBXUL
+ VISIBILITY_FLAGS =
+ endif
+ 
+ ifdef GNU_CC
+ MODULE_OPTIMIZE_FLAGS = -O2
+ else
+ ifeq ($(OS_ARCH),SunOS)
+ MODULE_OPTIMIZE_FLAGS = -xO5
+ endif
+ ifeq ($(OS_ARCH),WINNT)
+-# FIXME: bug 413019
+-OS_COMPILE_CFLAGS += -GL-
+ MODULE_OPTIMIZE_FLAGS = -O2
+ endif
+ endif
+ 
+ # Build MMX code either with VC or with gcc-on-x86
+ ifdef _MSC_VER
+ USE_MMX=1
+-MMX_CFLAGS=
++# avoid the bug of PGO
++MMX_CFLAGS=-GL-
+ endif
+ 
+ ifdef GNU_CC
+ ifeq (86,$(findstring 86,$(OS_TEST)))
+ USE_MMX=1
+ MMX_CFLAGS=-mmmx -msse -Winline
+ ifneq ($(MOZ_WIDGET_TOOLKIT),os2)
+ MMX_CFLAGS+=--param inline-unit-growth=10000 --param large-function-growth=10000
+@@ -105,21 +106,37 @@ ifdef USE_MMX
+ CSRCS += pixman-mmx.c
+ DEFINES += -DUSE_MMX
+ endif
+ 
+ EXPORTS		= pixman.h pixman-remap.h pixman-version.h
+ 
+ LOCAL_INCLUDES	+= -I$(srcdir) -I$(srcdir)/../../cairo/src
+ 
++ifneq (,$(filter /DTT_MEMUTIL -DTT_MEMUTIL,$(CL)))
++FORCE_SHARED_LIB = 1
++else
+ FORCE_STATIC_LIB = 1
++endif
+ # This library is used by other shared libs in a static build
+ FORCE_USE_PIC = 1
+ 
+ include $(topsrcdir)/config/rules.mk
+ 
+ CFLAGS += -DPACKAGE="mozpixman" -D_USE_MATH_DEFINES
+ 
++ifdef _MSC_VER
++pixman-compose.$(OBJ_SUFFIX): pixman-compose.c Makefile Makefile.in
++	$(REPORT_BUILD)
++	@$(MAKE_DEPS_AUTO_CC)
++	$(ELOG) $(CC) $(OUTOPTION)$@ -c $(COMPILE_CFLAGS) -GL- -openmp $(_VPATH_SRCS)
++endif
++
+ # special rule for pixman-mmx to get the right cflags
+ pixman-mmx.$(OBJ_SUFFIX): pixman-mmx.c Makefile Makefile.in
+ 	$(REPORT_BUILD)
+ 	@$(MAKE_DEPS_AUTO_CC)
+ 	$(ELOG) $(CC) $(OUTOPTION)$@ -c $(COMPILE_CFLAGS) $(MMX_CFLAGS) $(_VPATH_SRCS)
++
++ifneq (,$(filter /DTT_MEMUTIL -DTT_MEMUTIL,$(CL)))
++LDFLAGS += -DEF:$(win_srcdir)/mozlibpixman_tt.def
++LDFLAGS := $(filter-out -MANIFEST:NO,$(LDFLAGS))
++endif

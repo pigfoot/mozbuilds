@@ -1,0 +1,11 @@
+--- mozilla/embedding/browser/activex/src/control/DropTarget.cpp.BAK	2004-04-19 06:00:27.000000000 +0800
++++ mozilla/embedding/browser/activex/src/control/DropTarget.cpp	2008-02-25 12:14:26.655489700 +0800
+@@ -216,7 +216,7 @@
+     FORMATETC formatetc;
+     STGMEDIUM stgmedium;
+     memset(&formatetc, 0, sizeof(formatetc));
+-    memset(&stgmedium, 0, sizeof(formatetc));
++    memset(&stgmedium, 0, sizeof(stgmedium));
+ 
+     formatetc.dwAspect = DVASPECT_CONTENT;
+     formatetc.lindex = -1;

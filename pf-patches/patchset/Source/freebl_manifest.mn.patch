@@ -1,0 +1,26 @@
+Index: security/nss/lib/freebl/manifest.mn
+===================================================================
+RCS file: /cvsroot/mozilla/security/nss/lib/freebl/manifest.mn,v
+retrieving revision 1.51
+diff -u -8 -p -r1.51 manifest.mn
+--- security/nss/lib/freebl/manifest.mn	12 Jul 2007 04:39:18 -0000	1.51
++++ security/nss/lib/freebl/manifest.mn	16 Feb 2008 12:27:22 -0000
+@@ -93,17 +93,17 @@ PRIVATE_EXPORTS = \
+ 	secmpi.h \
+ 	secrng.h \
+ 	ec.h \
+ 	ecl.h \
+ 	ecl-curve.h \
+ 	$(NULL)
+ 
+ MPI_HDRS = mpi-config.h mpi.h mpi-priv.h mplogic.h mpprime.h logtab.h mp_gf2m.h
+-MPI_SRCS = mpprime.c mpmontg.c mplogic.c mpi.c mp_gf2m.c
++MPI_SRCS = mpprime.c mpmontg.c mplogic.c mpi.c mp_gf2m.c mpi_x86_asm.c
+ 
+ 
+ ECL_HDRS = ecl-exp.h ecl.h ec2.h ecp.h ecl-priv.h
+ ifdef NSS_ENABLE_ECC
+ ECL_SRCS = ecl.c ecl_curve.c ecl_mult.c ecl_gf.c \
+ 	ecp_aff.c ecp_jac.c ecp_mont.c \
+ 	ec_naf.c ecp_jm.c
+ ifdef NSS_ECC_MORE_THAN_SUITE_B

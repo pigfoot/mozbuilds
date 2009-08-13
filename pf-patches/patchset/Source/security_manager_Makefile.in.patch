@@ -1,0 +1,29 @@
+Index: security/manager/Makefile.in
+===================================================================
+RCS file: /cvsroot/mozilla/security/manager/Makefile.in,v
+retrieving revision 1.83
+diff -u -8 -p -r1.83 Makefile.in
+--- security/manager/Makefile.in	19 Apr 2008 10:37:41 -0000	1.83
++++ security/manager/Makefile.in	20 Jul 2008 03:50:01 -0000
+@@ -160,21 +160,16 @@ else
+ NSPR_INCLUDE_DIR = $(ABS_DIST)/include/nspr
+ endif
+ NSPR_LIB_DIR = $(firstword $(filter -L%,$(NSPR_LIBS)))
+ ifneq (,$(strip $(NSPR_LIB_DIR)))
+ NSPR_LIB_DIR := $(subst -L,,$(subst -L$(DIST),-L$(ABS_DIST),$(NSPR_LIB_DIR)))
+ else
+ NSPR_LIB_DIR = $(ABS_DIST)/lib
+ endif
+-# Can't pass this in DEFAULT_GMAKE_FLAGS because that overrides
+-# definitions in NSS, so just export it into the sub-make's environment.
+-ifeq (WINNT_1,$(OS_TARGET)_$(MOZ_MEMORY))
+-export DLLFLAGS
+-endif
+ # NSS makefiles are not safe for parallel execution.
+ DEFAULT_GMAKE_FLAGS = MAKE="$(MAKE) -j1" -j1
+ DEFAULT_GMAKE_FLAGS += CC="$(CC)"
+ DEFAULT_GMAKE_FLAGS += SOURCE_MD_DIR=$(ABS_DIST)
+ DEFAULT_GMAKE_FLAGS += DIST=$(ABS_DIST)
+ DEFAULT_GMAKE_FLAGS += NSPR_INCLUDE_DIR=$(NSPR_INCLUDE_DIR)
+ DEFAULT_GMAKE_FLAGS += NSPR_LIB_DIR=$(NSPR_LIB_DIR)
+ DEFAULT_GMAKE_FLAGS += MOZILLA_CLIENT=1

@@ -1,0 +1,94 @@
+Index: gfx/cairo/libpixman/src/pixman-access.c
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/cairo/libpixman/src/pixman-access.c,v
+retrieving revision 1.3
+diff -u -8 -p -r1.3 pixman-access.c
+--- gfx/cairo/libpixman/src/pixman-access.c	7 Apr 2008 05:07:39 -0000	1.3
++++ gfx/cairo/libpixman/src/pixman-access.c	19 Sep 2008 13:32:19 -0000
+@@ -68,35 +68,49 @@
+ 		((stride) >> 1) * ((line) >> 1)))
+ 
+ #define YV12_V(line)	      \
+     ((uint8_t *) ((bits) + offset0 + \
+ 		((stride) >> 1) * ((line) >> 1)))
+ 
+ /*********************************** Fetch ************************************/
+ 
+-static FASTCALL void
++#ifdef PIXMAN_FB_ACCESSORS
++extern FASTCALL void fbFetch_a8r8g8b8 (bits_image_t *pict, int x, int y, int width, uint32_t *buffer);
++#else /* PIXMAN_FB_ACCESSORS */
++#ifdef _MSC_VER
++__forceinline
++#endif
++FASTCALL void
+ fbFetch_a8r8g8b8 (bits_image_t *pict, int x, int y, int width, uint32_t *buffer)
+ {
+     const uint32_t *bits = pict->bits + y*pict->rowstride;
+     MEMCPY_WRAPPED(pict,
+                    buffer, (const uint32_t *)bits + x,
+ 		   width*sizeof(uint32_t));
+ }
++#endif /* PIXMAN_FB_ACCESSORS */
+ 
+-static FASTCALL void
++#ifdef PIXMAN_FB_ACCESSORS
++extern FASTCALL void fbFetch_x8r8g8b8 (bits_image_t *pict, int x, int y, int width, uint32_t *buffer);
++#else /* PIXMAN_FB_ACCESSORS */
++#ifdef _MSC_VER
++__forceinline
++#endif
++FASTCALL void
+ fbFetch_x8r8g8b8 (bits_image_t *pict, int x, int y, int width, uint32_t *buffer)
+ {
+     const uint32_t *bits = pict->bits + y*pict->rowstride;
+     const uint32_t *pixel = (const uint32_t *)bits + x;
+     const uint32_t *end = pixel + width;
+     while (pixel < end) {
+ 	*buffer++ = READ(pict, pixel++) | 0xff000000;
+     }
+ }
++#endif /* PIXMAN_FB_ACCESSORS */
+ 
+ static FASTCALL void
+ fbFetch_a8b8g8r8 (bits_image_t *pict, int x, int y, int width, uint32_t *buffer)
+ {
+     const uint32_t *bits = pict->bits + y*pict->rowstride;
+     const uint32_t *pixel = (uint32_t *)bits + x;
+     const uint32_t *end = pixel + width;
+     while (pixel < end) {
+@@ -324,26 +338,33 @@ fbFetch_x4b4g4r4 (bits_image_t *pict, in
+ 
+ 	b = ((p & 0x0f00) | ((p & 0x0f00) >> 4)) >> 4;
+ 	g = ((p & 0x00f0) | ((p & 0x00f0) >> 4)) << 8;
+ 	r = ((p & 0x000f) | ((p & 0x000f) << 4)) << 16;
+ 	*buffer++ = 0xff000000 | r | g | b;
+     }
+ }
+ 
+-static FASTCALL void
++#ifdef PIXMAN_FB_ACCESSORS
++extern FASTCALL void fbFetch_a8 (bits_image_t *pict, int x, int y, int width, uint32_t *buffer);
++#else /* PIXMAN_FB_ACCESSORS */
++#ifdef _MSC_VER
++__forceinline
++#endif
++FASTCALL void
+ fbFetch_a8 (bits_image_t *pict, int x, int y, int width, uint32_t *buffer)
+ {
+     const uint32_t *bits = pict->bits + y*pict->rowstride;
+     const uint8_t *pixel = (const uint8_t *)bits + x;
+     const uint8_t *end = pixel + width;
+     while (pixel < end) {
+ 	*buffer++ = READ(pict, pixel++) << 24;
+     }
+ }
++#endif /* PIXMAN_FB_ACCESSORS */
+ 
+ static FASTCALL void
+ fbFetch_r3g3b2 (bits_image_t *pict, int x, int y, int width, uint32_t *buffer)
+ {
+     uint32_t  r,g,b;
+     const uint32_t *bits = pict->bits + y*pict->rowstride;
+     const uint8_t *pixel = (const uint8_t *)bits + x;
+     const uint8_t *end = pixel + width;

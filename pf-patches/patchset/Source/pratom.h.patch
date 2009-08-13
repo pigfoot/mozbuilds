@@ -1,0 +1,48 @@
+Index: nsprpub/pr/include/pratom.h
+===================================================================
+RCS file: /cvsroot/mozilla/nsprpub/pr/include/pratom.h,v
+retrieving revision 3.8
+diff -u -8 -p -r3.8 pratom.h
+--- nsprpub/pr/include/pratom.h	25 Apr 2004 15:00:47 -0000	3.8
++++ nsprpub/pr/include/pratom.h	11 Dec 2007 13:48:18 -0000
+@@ -52,28 +52,40 @@ PR_BEGIN_EXTERN_C
+ ** FUNCTION: PR_AtomicIncrement
+ ** DESCRIPTION:
+ **    Atomically increment a 32 bit value.
+ ** INPUTS:
+ **    val:  a pointer to the value to increment
+ ** RETURN:
+ **    the returned value is the result of the increment
+ */
++#ifdef TT_MEMUTIL
++#undef PR_AtomicIncrement
++#endif
+ NSPR_API(PRInt32)	PR_AtomicIncrement(PRInt32 *val);
++#ifdef TT_MEMUTIL
++#define PR_AtomicIncrement(x) AtomicIncrement_tt((volatile long *)x)
++#endif
+ 
+ /*
+ ** FUNCTION: PR_AtomicDecrement
+ ** DESCRIPTION:
+ **    Atomically decrement a 32 bit value.
+ ** INPUTS:
+ **    val:  a pointer to the value to decrement
+ ** RETURN:
+ **    the returned value is the result of the decrement
+ */
++#ifdef TT_MEMUTIL
++#undef PR_AtomicDecrement
++#endif
+ NSPR_API(PRInt32)	PR_AtomicDecrement(PRInt32 *val);
++#ifdef TT_MEMUTIL
++#define PR_AtomicDecrement(x) AtomicDecrement_tt((volatile long *)x)
++#endif
+ 
+ /*
+ ** FUNCTION: PR_AtomicSet
+ ** DESCRIPTION:
+ **    Atomically set a 32 bit value.
+ ** INPUTS:
+ **    val: A pointer to a 32 bit value to be set
+ **    newval: The newvalue to assign to val

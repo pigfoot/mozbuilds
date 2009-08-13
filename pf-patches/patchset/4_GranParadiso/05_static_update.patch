@@ -1,0 +1,42 @@
+--- mozilla/modules/libbz2/src/Makefile.in.BAK	2003-08-16 08:42:08.000000000 +0800
++++ mozilla/modules/libbz2/src/Makefile.in	2007-08-03 13:47:16.869837600 +0800
+@@ -46,6 +46,7 @@
+ MODULE		= libbz2
+ LIBRARY_NAME	= bz2
+ FORCE_STATIC_LIB= 1
++USE_STATIC_LIBS = 1
+ 
+ # This is defined by the bzip2-1.0.3 Makefile.  It appears to be used to
+ # configure GLIBC to support large files.  This isn't something we care about
+--- mozilla/modules/libmar/src/Makefile.in.BAK	2005-07-06 04:37:26.000000000 +0800
++++ mozilla/modules/libmar/src/Makefile.in	2007-08-03 11:17:08.933418300 +0800
+@@ -61,6 +61,8 @@
+ 		mar.h \
+ 		$(NULL)
+ 
++USE_STATIC_LIBS = 1
++
+ include $(topsrcdir)/config/rules.mk
+ 
+ ifdef CROSS_COMPILE
+--- mozilla/modules/libmar/tool/Makefile.in.BAK	2005-07-06 05:30:12.000000000 +0800
++++ mozilla/modules/libmar/tool/Makefile.in	2008-02-25 00:21:12.464938200 +0800
+@@ -62,6 +62,8 @@
+ HOST_EXTRA_LIBS += $(call EXPAND_LIBNAME,ws2_32)
+ endif
+ 
++USE_STATIC_LIBS = 1
++
+ include $(topsrcdir)/config/rules.mk
+ 
+ ifdef CROSS_COMPILE
+--- mozilla/toolkit/mozapps/update/src/updater/Makefile.in.BAK	2007-03-09 00:12:20.000000000 +0800
++++ mozilla/toolkit/mozapps/update/src/updater/Makefile.in	2007-08-02 18:08:16.499816900 +0800
+@@ -60,6 +60,7 @@
+ 	$(NULL)
+ 
+ ifeq ($(OS_ARCH),WINNT)
++USE_STATIC_LIBS = 1
+ HAVE_PROGRESSUI = 1
+ RCINCLUDE = updater.rc
+ CPPSRCS += progressui_win.cpp

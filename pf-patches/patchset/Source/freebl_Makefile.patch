@@ -1,0 +1,30 @@
+Index: security/nss/lib/freebl/Makefile
+===================================================================
+RCS file: /cvsroot/mozilla/security/nss/lib/freebl/Makefile,v
+retrieving revision 1.91
+diff -u -8 -p -r1.91 Makefile
+--- security/nss/lib/freebl/Makefile	14 Nov 2007 22:49:44 -0000	1.91
++++ security/nss/lib/freebl/Makefile	16 Feb 2008 12:02:03 -0000
+@@ -94,21 +94,20 @@ ifdef NS_USE_GCC
+ #     ASFILES  = mpi_x86.s
+ #     DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE \
+ #                -DMP_ASSEMBLY_DIV_2DX1D
+ # but we haven't figured out how to make it work, so we are not
+ # using assembler right now.
+     ASFILES  =
+     DEFINES += -DMP_NO_MP_WORD -DMP_USE_UINT_DIGIT
+ else
+-    MPI_SRCS += mpi_x86_asm.c
+     DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE 
+     DEFINES += -DMP_ASSEMBLY_DIV_2DX1D -DMP_USE_UINT_DIGIT -DMP_NO_MP_WORD
+     ifdef BUILD_OPT
+-	OPTIMIZER += -Ox  # maximum optimization for freebl
++	OPTIMIZER += -O2  # maximum optimization for freebl
+     endif
+ endif
+ endif
+ endif
+ 
+ ifeq ($(OS_TARGET),WINCE)
+     DEFINES += -DMP_ARGCHK=0	# no assert in WinCE
+     DEFINES += -DSHA_NO_LONG_LONG # avoid 64-bit arithmetic in SHA512

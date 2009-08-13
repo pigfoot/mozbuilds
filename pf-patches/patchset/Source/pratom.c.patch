@@ -1,0 +1,48 @@
+Index: nsprpub/pr/src/misc/pratom.c
+===================================================================
+RCS file: /cvsroot/mozilla/nsprpub/pr/src/misc/pratom.c,v
+retrieving revision 3.19
+diff -u -8 -p -r3.19 pratom.c
+--- nsprpub/pr/src/misc/pratom.c	7 Sep 2006 23:33:39 -0000	3.19
++++ nsprpub/pr/src/misc/pratom.c	11 Dec 2007 14:07:20 -0000
+@@ -295,27 +295,39 @@ _PR_MD_ATOMIC_SET(PRInt32 *val, PRInt32 
+ 
+ #endif  /* !_PR_HAVE_ATOMIC_OPS */
+ 
+ void _PR_InitAtomic(void)
+ {
+     _PR_MD_INIT_ATOMIC();
+ }
+ 
++#ifdef TT_MEMUTIL
++#undef PR_AtomicIncrement
++#endif
+ PR_IMPLEMENT(PRInt32)
+ PR_AtomicIncrement(PRInt32 *val)
+ {
+     return _PR_MD_ATOMIC_INCREMENT(val);
+ }
+-
++#ifdef TT_MEMUTIL
++#define PR_AtomicIncrement(x) AtomicIncrement_tt((volatile long *)x)
++#endif
++
++#ifdef TT_MEMUTIL
++#undef PR_AtomicDecrement
++#endif
+ PR_IMPLEMENT(PRInt32)
+ PR_AtomicDecrement(PRInt32 *val)
+ {
+     return _PR_MD_ATOMIC_DECREMENT(val);
+ }
++#ifdef TT_MEMUTIL
++#define PR_AtomicDecrement(x) AtomicDecrement_tt((volatile long *)x)
++#endif
+ 
+ PR_IMPLEMENT(PRInt32)
+ PR_AtomicSet(PRInt32 *val, PRInt32 newval)
+ {
+     return _PR_MD_ATOMIC_SET(val, newval);
+ }
+ 
+ PR_IMPLEMENT(PRInt32)

@@ -1,0 +1,11 @@
+--- mozilla/Makefile.in.BAK	2006-03-24 19:01:55.000000000 +0800
++++ mozilla/Makefile.in	2006-03-27 17:49:45.308063600 +0800
+@@ -399,7 +399,7 @@
+ # winembed, mfcembed
+ ifeq ($(OS_ARCH),WINNT)
+ ifneq (,$(ENABLE_TESTS)$(MOZILLA_OFFICIAL))
+-tier_99_dirs += embedding/tests
++#tier_99_dirs += embedding/tests
+ endif
+ endif
+ 

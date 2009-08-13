@@ -1,0 +1,31 @@
+Index: nsprpub/pr/include/prmem.h
+===================================================================
+RCS file: /cvsroot/mozilla/nsprpub/pr/include/prmem.h,v
+retrieving revision 3.12
+diff -u -8 -p -r3.12 prmem.h
+--- nsprpub/pr/include/prmem.h	4 Feb 2005 00:20:33 -0000	3.12
++++ nsprpub/pr/include/prmem.h	8 Apr 2008 15:04:53 -0000
+@@ -66,16 +66,23 @@ PR_BEGIN_EXTERN_C
+ NSPR_API(void *) PR_Malloc(PRUint32 size);
+ 
+ NSPR_API(void *) PR_Calloc(PRUint32 nelem, PRUint32 elsize);
+ 
+ NSPR_API(void *) PR_Realloc(void *ptr, PRUint32 size);
+ 
+ NSPR_API(void) PR_Free(void *ptr);
+ 
++#ifdef _DLL
++#define PR_Malloc(size)           malloc(size)
++#define PR_Calloc(nelem, elsize)  calloc(nelem, elsize)
++#define PR_Realloc(ptr, size)     realloc(ptr, size)
++#define PR_Free(ptr)              free(ptr)
++#endif
++
+ /*
+ ** The following are some convenience macros defined in terms of
+ ** PR_Malloc, PR_Calloc, PR_Realloc, and PR_Free.
+ */
+ 
+ /***********************************************************************
+ ** FUNCTION:	PR_MALLOC()
+ ** DESCRIPTION:

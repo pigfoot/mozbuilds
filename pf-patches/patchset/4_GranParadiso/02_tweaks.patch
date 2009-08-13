@@ -1,0 +1,22 @@
+--- mozilla/browser/app/profile/firefox.js.BAK  Fri Dec 19 19:38:05 2008
++++ mozilla/browser/app/profile/firefox.js      Mon Feb  2 21:40:18 2009
+@@ -763,3 +763,19 @@
+
+ // base URL for web-based support pages
+ pref("app.support.baseURL", "http://support.mozilla.com/1/%APP%/%VERSION%/%OS%/%LOCALE%/");
++
++// pigfoot's tweaks
++pref("general.useragent.extra.pigfoot", "(pigfoot)");
++pref("app.update.url", "https://update.pigfoot.org/__pigfoot_arch__/2/%PRODUCT%/%VERSION%/%BUILD_ID%/%BUILD_TARGET%/%LOCALE%/%CHANNEL%/%OS_VERSION%/update.xml");
++pref("browser.enable_automatic_image_resizing", false);
++pref("network.http.max-connections", 48);
++pref("network.http.max-connections-per-server", 16);
++pref("network.http.max-persistent-connections-per-proxy", 16);
++pref("network.http.max-persistent-connections-per-server", 8);
++pref("network.http.pipelining", true);
++pref("network.http.proxy.pipelining", true);
++pref("network.http.pipelining.maxrequests", 8);
++pref("plugin.expose_full_path", true);
++pref("signed.applets.codebase_principal_support", true);
++pref("config.trim_on_minimize", true);
++//pref("extensions.checkCompatibility", false);  // Bug330895

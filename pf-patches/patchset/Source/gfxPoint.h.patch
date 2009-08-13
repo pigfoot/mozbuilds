@@ -1,0 +1,64 @@
+Index: gfx/thebes/public/gfxPoint.h
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/thebes/public/gfxPoint.h,v
+retrieving revision 1.17
+diff -u -8 -p -r1.17 gfxPoint.h
+--- gfx/thebes/public/gfxPoint.h	31 Mar 2008 09:40:55 -0000	1.17
++++ gfx/thebes/public/gfxPoint.h	24 May 2008 06:31:01 -0000
+@@ -36,16 +36,17 @@
+  * ***** END LICENSE BLOCK ***** */
+ 
+ #ifndef GFX_POINT_H
+ #define GFX_POINT_H
+ 
+ #include "nsMathUtils.h"
+ 
+ #include "gfxTypes.h"
++#include <limits.h>
+ 
+ /*
+  * gfxSize and gfxIntSize -- please keep their member functions in sync.
+  * also note: gfxIntSize may be replaced by nsIntSize at some point...
+  */
+ struct THEBES_API gfxIntSize {
+     PRInt32 width, height;
+ 
+@@ -99,16 +100,20 @@ struct THEBES_API gfxSize {
+         return gfxSize(width * v, height * v);
+     }
+     gfxSize operator/(const gfxFloat v) const {
+         return gfxSize(width / v, height / v);
+     }
+ };
+ 
+ 
++extern "C" int _cairo_lround(double d);
++#define round_tt(d) \
++    ((((gfxFloat)(d) > (gfxFloat)INT_MIN) && ((gfxFloat)(d) <= (gfxFloat)INT_MAX)) ? \
++    ((gfxFloat)_cairo_lround(d)) : (NS_floor((d) + 0.5)))
+ 
+ struct THEBES_API gfxPoint {
+     gfxFloat x, y;
+ 
+     gfxPoint() { }
+     gfxPoint(const gfxPoint& p) : x(p.x), y(p.y) {}
+     gfxPoint(gfxFloat _x, gfxFloat _y) : x(_x), y(_y) {}
+ 
+@@ -147,15 +152,15 @@ struct THEBES_API gfxPoint {
+         return gfxPoint(x / v, y / v);
+     }
+     // Round() is *not* rounding to nearest integer if the values are negative.
+     // They are always rounding as floor(n + 0.5).
+     // See https://bugzilla.mozilla.org/show_bug.cgi?id=410748#c14
+     // And if you need similar method which is using NS_round(), you should
+     // create new |RoundAwayFromZero()| method.
+     gfxPoint& Round() {
+-        x = NS_floor(x + 0.5);
+-        y = NS_floor(y + 0.5);
++        x = round_tt(x);
++        y = round_tt(y);
+         return *this;
+     }
+ };
+ 
+ #endif /* GFX_POINT_H */

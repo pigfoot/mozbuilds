@@ -1,0 +1,26 @@
+Index: gfx/cairo/cairo/src/cairoint.h
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/cairo/cairo/src/cairoint.h,v
+retrieving revision 1.63
+diff -u -8 -p -r1.63 cairoint.h
+--- gfx/cairo/cairo/src/cairoint.h	7 Apr 2008 05:09:45 -0000	1.63
++++ gfx/cairo/cairo/src/cairoint.h	20 May 2008 10:23:03 -0000
+@@ -915,17 +915,17 @@ typedef struct _cairo_stroke_face {
+     cairo_slope_t dev_vector;
+     cairo_point_double_t usr_vector;
+ } cairo_stroke_face_t;
+ 
+ /* cairo.c */
+ cairo_private void
+ _cairo_restrict_value (double *value, double min, double max);
+ 
+-cairo_private int
++cairo_public int
+ _cairo_lround (double d);
+ 
+ /* cairo_gstate.c */
+ cairo_private cairo_status_t
+ _cairo_gstate_init (cairo_gstate_t  *gstate,
+ 		    cairo_surface_t *target);
+ 
+ cairo_private void

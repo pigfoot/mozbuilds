@@ -1,0 +1,596 @@
+Index: gfx/cairo/libpixman/src/pixman-compose.c
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/cairo/libpixman/src/pixman-compose.c,v
+retrieving revision 1.20
+diff -u -8 -p -r1.20 pixman-compose.c
+--- gfx/cairo/libpixman/src/pixman-compose.c	7 Apr 2008 05:07:39 -0000	1.20
++++ gfx/cairo/libpixman/src/pixman-compose.c	13 Oct 2008 01:44:27 -0000
+@@ -28,16 +28,30 @@
+ #endif
+ 
+ #include <stdlib.h>
+ #include <string.h>
+ #include <math.h>
+ #include <assert.h>
+ #include <limits.h>
+ 
++#if defined(_OPENMP) && defined(_MSC_VER)
++#include <windows.h>
++#if !defined(_DEBUG) && defined(_M_IX86)
++/* use vcomp.dll as a private assembly */
++#define _OPENMP_NOFORCE_MANIFEST
++#include <crtassem.h>
++#pragma comment(linker,"/manifestdependency:\"type='win32' "            \
++    "name='" __LIBRARIES_ASSEMBLY_NAME_PREFIX ".OpenMP' "              \
++    "version='" _CRT_ASSEMBLY_VERSION "' "                          \
++    "processorArchitecture='x86'\"")
++#endif
++#include <omp.h>
++#endif
++
+ #include "pixman-private.h"
+ 
+ #ifdef PIXMAN_FB_ACCESSORS
+ #define PIXMAN_COMPOSITE_RECT_GENERAL pixman_composite_rect_general_accessors
+ 
+ #define FETCH_PROC_FOR_PICTURE pixman_fetchProcForPicture_accessors
+ #define FETCH_PIXEL_PROC_FOR_PICTURE pixman_fetchPixelProcForPicture_accessors
+ #define STORE_PROC_FOR_PICTURE pixman_storeProcForPicture_accessors
+@@ -128,21 +142,66 @@ static void fbFetchSolid(bits_image_t * 
+ 
+     color = fetch(pict, 0, 0);
+ 
+     end = buffer + width;
+     while (buffer < end)
+ 	*(buffer++) = color;
+ }
+ 
++#ifdef PIXMAN_FB_ACCESSORS
++extern FASTCALL void fbFetch_a8r8g8b8 (bits_image_t *pict, int x, int y, int width, uint32_t *buffer);
++extern FASTCALL void fbFetch_a8 (bits_image_t *pict, int x, int y, int width, uint32_t *buffer);
++extern FASTCALL void fbFetch_x8r8g8b8 (bits_image_t *pict, int x, int y, int width, uint32_t *buffer);
++#else /* PIXMAN_FB_ACCESSORS */
++#define fbFetch_a8r8g8b8(pict, x, y, width, buffer) \
++    MEMCPY_WRAPPED((pict), (buffer), \
++    (const uint32_t *)((pict)->bits + (y)*(pict)->rowstride) + (x), \
++    (width)*sizeof(uint32_t))
++#define fbFetch_a8(pict, x, y, width, buffer) do { \
++    const uint32_t *bits = (pict)->bits + (y)*(pict)->rowstride; \
++    const uint8_t *pixel = (const uint8_t *)bits + (x); \
++    const uint8_t *end = pixel + (width); \
++    while (pixel < end) { \
++        *buffer++ = READ(pict, pixel++) << 24; \
++    } \
++} while (0)
++#define fbFetch_x8r8g8b8(pict, x, y, width, buffer) do { \
++    const uint32_t *bits = (pict)->bits + (y)*(pict)->rowstride; \
++    const uint32_t *pixel = (const uint32_t *)bits + (x); \
++    const uint32_t *end = pixel + (width); \
++    while (pixel < end) { \
++        *buffer++ = READ(pict, pixel++) | 0xff000000; \
++    } \
++} while (0)
++#endif /* PIXMAN_FB_ACCESSORS */
++
++#ifdef _MSC_VER
++__forceinline
++#endif
+ static void fbFetch(bits_image_t * pict, int x, int y, int width, uint32_t *buffer, uint32_t *mask, uint32_t maskBits)
+ {
+-    fetchProc fetch = FETCH_PROC_FOR_PICTURE(pict);
+-
+-    fetch(pict, x, y, width, buffer);
++    switch (pict->format)
++    {
++    case PIXMAN_a8r8g8b8:
++        fbFetch_a8r8g8b8(pict, x, y, width, buffer);
++        break;
++
++    case PIXMAN_a8:
++        fbFetch_a8(pict, x, y, width, buffer);
++        break;
++
++    case PIXMAN_x8r8g8b8:
++        fbFetch_x8r8g8b8(pict, x, y, width, buffer);
++        break;
++
++    default:
++        (FETCH_PROC_FOR_PICTURE(pict))(pict, x, y, width, buffer);
++        break;
++    }
+ }
+ 
+ static void
+ fbStore(bits_image_t * pict, int x, int y, int width, uint32_t *buffer)
+ {
+     uint32_t *bits;
+     int32_t stride;
+     storeProc store = STORE_PROC_FOR_PICTURE(pict);
+@@ -153,33 +212,83 @@ fbStore(bits_image_t * pict, int x, int 
+     bits += y*stride;
+     store((pixman_image_t *)pict, bits, buffer, x, width, indexed);
+ }
+ 
+ typedef void (*scanStoreProc)(pixman_image_t *, int, int, int, uint32_t *);
+ typedef void (*scanFetchProc)(pixman_image_t *, int, int, int, uint32_t *,
+ 			      uint32_t *, uint32_t);
+ 
++#ifdef _MSC_VER
++#ifndef PIXMAN_FB_ACCESSORS
++void
++InitializeOpenMP()
++{
++#ifdef _OPENMP
++    DWORD pam, sam;
++
++    if (GetProcessAffinityMask(GetCurrentProcess(), &pam, &sam))
++    {
++        int b;
++
++        for (b = 0; b <= 31; b++)
++        {
++            if (pam & (1 << b)) omp_cpu_counts++;
++        }
++
++        if (omp_cpu_counts >= 1)
++        {
++            omp_set_dynamic(0);
++            if (omp_cpu_counts > OMP_MAX_CPU_COUNTS_TT)
++            {
++                omp_cpu_counts = OMP_MAX_CPU_COUNTS_TT;
++            }
++#if 0
++omp_cpu_counts = OMP_MAX_CPU_COUNTS_TT;
++#endif
++            omp_set_num_threads(omp_cpu_counts);
++
++#pragma omp parallel
++            {
++                SetThreadIdealProcessor(GetCurrentThread(), omp_get_thread_num());
++            }
++        }
++    }
++#endif /* _OPENMP */
++}
++#endif /* PIXMAN_FB_ACCESSORS */
++#endif /* _MSC_VER */
++
++#ifdef TT_MEMUTIL
++extern pixman_bool_t nt_initialized;
++extern uint32_t dwNonTemporalDataSizeMin;
++extern FASTCALL void fbCombineSrcU (uint32_t *dest, const uint32_t *src, int width);
++extern FASTCALL void fbCombineSrcU_nontemporal (uint32_t *dest, const uint32_t *src, int width);
++#endif
++
++#include <windows.h>
++
+ #ifndef PIXMAN_FB_ACCESSORS
+ static
+ #endif
+ void
+ PIXMAN_COMPOSITE_RECT_GENERAL (const FbComposeData *data,
+ 			       uint32_t *scanline_buffer)
+ {
+-    uint32_t *src_buffer = scanline_buffer;
+-    uint32_t *dest_buffer = src_buffer + data->width;
+     int i;
+     scanStoreProc store;
+     scanFetchProc fetchSrc = NULL, fetchMask = NULL, fetchDest = NULL;
+     unsigned int srcClass = SOURCE_IMAGE_CLASS_UNKNOWN;
+     unsigned int maskClass = SOURCE_IMAGE_CLASS_UNKNOWN;
+     uint32_t *bits;
+     int32_t stride;
+     int xoff, yoff;
++#if defined(_OPENMP) && defined(_MSC_VER)
++    static uint32_t scanline_buffers[OMP_MAX_CPU_COUNTS_TT - 1][SCANLINE_BUFFER_LENGTH * 3];
++#endif
+ 
+     if (data->op == PIXMAN_OP_CLEAR)
+         fetchSrc = NULL;
+     else if (IS_SOURCE_IMAGE (data->src))
+     {
+ 	fetchSrc = (scanFetchProc)pixmanFetchSourcePict;
+ 	srcClass = SourcePictureClassify ((source_image_t *)data->src,
+ 					  data->xSrc, data->ySrc,
+@@ -296,21 +405,26 @@ PIXMAN_COMPOSITE_RECT_GENERAL (const FbC
+ 
+     if (fetchSrc		   &&
+ 	fetchMask		   &&
+ 	data->mask		   &&
+ 	data->mask->common.type == BITS &&
+ 	data->mask->common.component_alpha &&
+ 	PIXMAN_FORMAT_RGB (data->mask->bits.format))
+     {
+-	uint32_t *mask_buffer = dest_buffer + data->width;
+ 	CombineFuncC compose = pixman_composeFunctions.combineC[data->op];
+ 	if (!compose)
+ 	    return;
+ 
++{
++  /* use single-thread loop */
++	uint32_t *src_buffer = scanline_buffer;
++	uint32_t *dest_buffer = src_buffer + data->width;
++	uint32_t *mask_buffer = dest_buffer + data->width;
++
+ 	for (i = 0; i < data->height; ++i) {
+ 	    /* fill first half of scanline with source */
+ 	    if (fetchSrc)
+ 	    {
+ 		if (fetchMask)
+ 		{
+ 		    /* fetch mask before source so that fetching of
+ 		       source can be optimized */
+@@ -357,24 +471,278 @@ PIXMAN_COMPOSITE_RECT_GENERAL (const FbC
+ 	    else
+ 	    {
+ 		/* blend */
+ 		compose (bits + (data->yDest + i+ yoff) * stride +
+ 			 data->xDest + xoff,
+ 			 src_buffer, mask_buffer, data->width);
+ 	    }
+ 	}
++}
+     }
+     else
+     {
+-	uint32_t *src_mask_buffer = 0, *mask_buffer = 0;
+ 	CombineFuncU compose = pixman_composeFunctions.combineU[data->op];
+ 	if (!compose)
+ 	    return;
+ 
++#ifdef TT_MEMUTIL
++    if (!nt_initialized)
++    {
++        dwNonTemporalDataSizeMin = GetNonTemporalDataSizeMin_tt();
++        nt_initialized = TRUE;
++    }
++#endif
++
++#if 0
++#if defined(_OPENMP) && defined(_MSC_VER)
++{
++  char sz[128];
++  const BOOL b012545454 = (fetchSrc && fetchMask && srcClass == SOURCE_IMAGE_CLASS_HORIZONTAL);
++  const BOOL b025555555 = (fetchSrc && !fetchMask && srcClass == SOURCE_IMAGE_CLASS_HORIZONTAL); /* 境界線テスト */
++  const BOOL b035035035 = (fetchSrc && !fetchMask && srcClass != SOURCE_IMAGE_CLASS_HORIZONTAL); /* 拡大縮小画像 */
++
++  wsprintf(sz, "%d", b035035035);
++  OutputDebugString(sz);
++
++/*
++  MAJOR.JP｜MLB 個人成績:
++  fetchSrc=1, fetchMask=1, srcClass=1, maskClass=0
++
++  境界線テスト:
++  fetchSrc=1, fetchMask=0, srcClass=1, maskClass=0
++*/
++  wsprintf(sz, "fetchSrc=%d, fetchMask=%d, srcClass=%d, maskClass=%d\n", fetchSrc != NULL, fetchMask != NULL, srcClass == SOURCE_IMAGE_CLASS_HORIZONTAL, maskClass == SOURCE_IMAGE_CLASS_HORIZONTAL);
++  OutputDebugString(sz);
++}
++#endif
++#endif
++
++#if defined(_OPENMP) && defined(_MSC_VER)
++if (omp_cpu_counts >= 2 &&
++    fetchSrc && !fetchMask && srcClass != SOURCE_IMAGE_CLASS_HORIZONTAL &&
++    data->width * data->height >= 25000 &&
++    data->width <= SCANLINE_BUFFER_LENGTH)
++{
++  /* use multithread loop */
++	uint32_t *src_buffers[OMP_MAX_CPU_COUNTS_TT];
++	uint32_t *dest_buffers[OMP_MAX_CPU_COUNTS_TT];
++
++#ifdef TT_MEMUTIL
++    if (compose == fbCombineSrcU &&
++        NULL == store &&
++        (uint32_t)(data->width * sizeof(uint32_t) * data->height)
++        / (uint32_t)omp_cpu_counts
++        > dwNonTemporalDataSizeMin)
++    {
++        compose = fbCombineSrcU_nontemporal;
++    }
++#endif
++
++  for (i = 0; i < omp_cpu_counts; i++)
++  {
++      if (0 == i)
++          src_buffers[i] = scanline_buffer;
++      else
++          src_buffers[i] = &scanline_buffers[i - 1];
++      dest_buffers[i] = src_buffers[i] + data->width;
++  }
++
++#pragma omp parallel for
++	for (i = 0; i < data->height; ++i) {
++	    const int thread_num = omp_get_thread_num();
++	    /* fill first half of scanline with source */
++		    if (fetchSrc == fbFetch)
++		    {
++			    fbFetch (data->src, data->xSrc, data->ySrc + i,
++				      data->width, src_buffers[thread_num], 0,
++				      0xff000000);
++		    }
++		    else
++		    {
++			    fetchSrc (data->src, data->xSrc, data->ySrc + i,
++				      data->width, src_buffers[thread_num], 0,
++				      0xff000000);
++		    }
++
++	    if (store)
++	    {
++		/* fill dest into second half of scanline */
++		if (fetchDest)
++		    fetchDest (data->dest, data->xDest, data->yDest + i,
++			       data->width, dest_buffers[thread_num], 0, 0);
++
++		/* blend */
++		compose (dest_buffers[thread_num], src_buffers[thread_num], data->width);
++
++		/* write back */
++		store (data->dest, data->xDest, data->yDest + i, data->width,
++		       dest_buffers[thread_num]);
++	    }
++	    else
++	    {
++		/* blend */
++		if (PIXMAN_OP_OVER == data->op && 1 == data->width)
++		{
++			uint32_t *dest = bits + (data->yDest + i+ yoff) * stride + data->xDest + xoff;
++			uint32_t s = *(src_buffers[thread_num]);
++			uint32_t d = *(dest);
++			uint32_t ia = Alpha(~s);
++
++			FbByteMulAdd(d, ia, s);
++			*(dest) = d;
++		}
++		else
++		{
++			compose (bits + (data->yDest + i+ yoff) * stride +
++				 data->xDest + xoff,
++				 src_buffers[thread_num], data->width);
++		}
++	    }
++	}
++}
++else if (omp_cpu_counts >= 2 &&
++    fetchSrc && fetchMask &&
++    SOURCE_IMAGE_CLASS_HORIZONTAL == srcClass &&
++    SOURCE_IMAGE_CLASS_HORIZONTAL != maskClass &&
++    data->width * data->height >= 150000 &&
++    data->width <= SCANLINE_BUFFER_LENGTH)
++{
++  /* use multithread loop */
++	uint32_t *src_buffer = scanline_buffer;
++	uint32_t *src_buffers[OMP_MAX_CPU_COUNTS_TT];
++	uint32_t *dest_buffers[OMP_MAX_CPU_COUNTS_TT];
++	uint32_t *mask_buffers[OMP_MAX_CPU_COUNTS_TT];
++
++#ifdef TT_MEMUTIL
++    if (compose == fbCombineSrcU &&
++        NULL == store &&
++        (uint32_t)(data->width * sizeof(uint32_t) * data->height)
++        / (uint32_t)omp_cpu_counts
++        > dwNonTemporalDataSizeMin)
++    {
++        compose = fbCombineSrcU_nontemporal;
++    }
++#endif
++
++  for (i = 0; i < omp_cpu_counts; i++)
++  {
++      if (0 == i)
++          src_buffers[i] = scanline_buffer;
++      else
++          src_buffers[i] = &scanline_buffers[i - 1];
++      dest_buffers[i] = src_buffers[i] + data->width;
++      mask_buffers[i] = dest_buffers[i] + data->width;
++  }
++
++	if (data->height >= 1) {
++	    int i = 0;
++	    /* fill first half of scanline with source */
++	    fetchMask (data->mask, data->xMask, data->yMask + i,
++		      data->width, mask_buffers[0], 0, 0);
++
++	    fetchSrc (data->src, data->xSrc, data->ySrc + i,
++		      data->width, src_buffer, 0, 0);
++
++		pixman_composeFunctions.combineU[PIXMAN_OP_IN] (mask_buffers[0], src_buffer, data->width);
++
++	    if (store)
++	    {
++		/* fill dest into second half of scanline */
++		if (fetchDest)
++		    fetchDest (data->dest, data->xDest, data->yDest + i,
++			       data->width, dest_buffers[0], 0, 0);
++
++		/* blend */
++		compose (dest_buffers[0], mask_buffers[0], data->width);
++
++		/* write back */
++		store (data->dest, data->xDest, data->yDest + i, data->width,
++		       dest_buffers[0]);
++	    }
++	    else
++	    {
++		/* blend */
++			compose (bits + (data->yDest + i+ yoff) * stride +
++				 data->xDest + xoff,
++				 mask_buffers[0], data->width);
++	    }
++	}
++
++#pragma omp parallel for
++	for (i = 1; i < data->height; ++i) {
++	    const int thread_num = omp_get_thread_num();
++	    /* fill first half of scanline with source */
++	    if (fetchMask == fbFetch)
++	    {
++		    fbFetch (data->mask, data->xMask, data->yMask + i,
++			      data->width, mask_buffers[thread_num], 0, 0);
++	    }
++	    else
++	    {
++		    fetchMask (data->mask, data->xMask, data->yMask + i,
++			      data->width, mask_buffers[thread_num], 0, 0);
++	    }
++
++		pixman_composeFunctions.combineU[PIXMAN_OP_IN] (mask_buffers[thread_num], src_buffer, data->width);
++
++	    if (store)
++	    {
++		/* fill dest into second half of scanline */
++		if (fetchDest)
++		    fetchDest (data->dest, data->xDest, data->yDest + i,
++			       data->width, dest_buffers[thread_num], 0, 0);
++
++		/* blend */
++		compose (dest_buffers[thread_num], mask_buffers[thread_num], data->width);
++
++		/* write back */
++		store (data->dest, data->xDest, data->yDest + i, data->width,
++		       dest_buffers[thread_num]);
++	    }
++	    else
++	    {
++		/* blend */
++		if (PIXMAN_OP_OVER == data->op && 1 == data->width)
++		{
++			uint32_t *dest = bits + (data->yDest + i+ yoff) * stride + data->xDest + xoff;
++			uint32_t s = *(mask_buffers[thread_num]);
++			uint32_t d = *(dest);
++			uint32_t ia = Alpha(~s);
++
++			FbByteMulAdd(d, ia, s);
++			*(dest) = d;
++		}
++		else
++		{
++			compose (bits + (data->yDest + i+ yoff) * stride +
++				 data->xDest + xoff,
++				 mask_buffers[thread_num], data->width);
++		}
++	    }
++	}
++}
++else
++#endif
++{
++  /* use single-thread loop */
++	uint32_t *src_buffer = scanline_buffer;
++	uint32_t *dest_buffer = src_buffer + data->width;
++	uint32_t *src_mask_buffer = 0, *mask_buffer = 0;
++
++#ifdef TT_MEMUTIL
++    if (compose == fbCombineSrcU &&
++        NULL == store &&
++        (uint32_t)(data->width * sizeof(uint32_t) * data->height)
++        > dwNonTemporalDataSizeMin)
++    {
++        compose = fbCombineSrcU_nontemporal;
++    }
++#endif
++
+ 	if (fetchMask)
+ 	    mask_buffer = dest_buffer + data->width;
+ 
+ 	for (i = 0; i < data->height; ++i) {
+ 	    /* fill first half of scanline with source */
+ 	    if (fetchSrc)
+ 	    {
+ 		if (fetchMask)
+@@ -400,32 +768,49 @@ PIXMAN_COMPOSITE_RECT_GENERAL (const FbC
+ 		    }
+ 		    else
+ 			src_mask_buffer = src_buffer;
+ 
+ 		    fetchSrc = NULL;
+ 		}
+ 		else
+ 		{
+-		    fetchSrc (data->src, data->xSrc, data->ySrc + i,
+-			      data->width, src_buffer, mask_buffer,
+-			      0xff000000);
++		    if (fetchSrc == fbFetch)
++		    {
++			    fbFetch (data->src, data->xSrc, data->ySrc + i,
++				      data->width, src_buffer, mask_buffer,
++				      0xff000000);
++		    }
++		    else
++		    {
++			    fetchSrc (data->src, data->xSrc, data->ySrc + i,
++				      data->width, src_buffer, mask_buffer,
++				      0xff000000);
++		    }
+ 
+ 		    if (mask_buffer)
+ 			pixman_composeFunctions.combineMaskU (src_buffer,
+ 							      mask_buffer,
+ 							      data->width);
+ 
+ 		    src_mask_buffer = src_buffer;
+ 		}
+ 	    }
+ 	    else if (fetchMask)
+ 	    {
+-		fetchMask (data->mask, data->xMask, data->yMask + i,
+-			   data->width, mask_buffer, 0, 0);
++		    if (fetchMask == fbFetch)
++		    {
++			    fbFetch (data->mask, data->xMask, data->yMask + i,
++				      data->width, mask_buffer, 0, 0);
++		    }
++		    else
++		    {
++			    fetchMask (data->mask, data->xMask, data->yMask + i,
++				      data->width, mask_buffer, 0, 0);
++		    }
+ 
+ 		pixman_composeFunctions.combineU[PIXMAN_OP_IN] (mask_buffer, src_buffer, data->width);
+ 
+ 		src_mask_buffer = mask_buffer;
+ 	    }
+ 
+ 	    if (store)
+ 	    {
+@@ -439,21 +824,35 @@ PIXMAN_COMPOSITE_RECT_GENERAL (const FbC
+ 
+ 		/* write back */
+ 		store (data->dest, data->xDest, data->yDest + i, data->width,
+ 		       dest_buffer);
+ 	    }
+ 	    else
+ 	    {
+ 		/* blend */
+-		compose (bits + (data->yDest + i+ yoff) * stride +
+-			 data->xDest + xoff,
+-			 src_mask_buffer, data->width);
++		if (PIXMAN_OP_OVER == data->op && 1 == data->width)
++		{
++			uint32_t *dest = bits + (data->yDest + i+ yoff) * stride + data->xDest + xoff;
++			uint32_t s = *(src_mask_buffer);
++			uint32_t d = *(dest);
++			uint32_t ia = Alpha(~s);
++
++			FbByteMulAdd(d, ia, s);
++			*(dest) = d;
++		}
++		else
++		{
++			compose (bits + (data->yDest + i+ yoff) * stride +
++				 data->xDest + xoff,
++				 src_mask_buffer, data->width);
++		}
+ 	    }
+ 	}
++}
+     }
+ }
+ 
+ #ifndef PIXMAN_FB_ACCESSORS
+ 
+ void
+ pixman_composite_rect_general (const FbComposeData *data,
+ 			       uint32_t *scanline_buffer)

@@ -1,0 +1,28 @@
+Index: js/src/prmjtime.c
+===================================================================
+RCS file: /cvsroot/mozilla/js/src/prmjtime.c,v
+retrieving revision 3.67
+diff -u -8 -p -r3.67 prmjtime.c
+--- js/src/prmjtime.c	22 Feb 2008 23:49:41 -0000	3.67
++++ js/src/prmjtime.c	1 Mar 2008 04:46:10 -0000
+@@ -194,18 +194,19 @@ NowCalibrate()
+     if (calibration.freq > 0.0) {
+         JSInt64 calibrationDelta = 0;
+ 
+         /* By wrapping a timeBegin/EndPeriod pair of calls around this loop,
+            the loop seems to take much less time (1 ms vs 15ms) on Vista. */
+         timeBeginPeriod(1);
+         GetSystemTimeAsFileTime(&ftStart);
+         do {
++            SwitchToThread();
+             GetSystemTimeAsFileTime(&ft);
+-        } while (memcmp(&ftStart,&ft, sizeof(ft)) == 0);
++        } while (ftStart.dwLowDateTime == ft.dwLowDateTime);
+         timeEndPeriod(1);
+ 
+         /*
+         calibrationDelta = (FILETIME2INT64(ft) - FILETIME2INT64(ftStart))/10;
+         fprintf(stderr, "Calibration delta was %I64d us\n", calibrationDelta);
+         */
+ 
+         QueryPerformanceCounter(&now);

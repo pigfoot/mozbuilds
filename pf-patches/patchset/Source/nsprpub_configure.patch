@@ -1,0 +1,25 @@
+Index: nsprpub/configure
+===================================================================
+RCS file: /cvsroot/mozilla/nsprpub/configure,v
+retrieving revision 1.229
+diff -u -8 -p -r1.229 configure
+--- nsprpub/configure	28 Apr 2008 23:21:11 -0000	1.229
++++ nsprpub/configure	12 May 2008 10:11:50 -0000
+@@ -4031,16 +4031,17 @@ EOF
+                 MT=mt
+                 unset MSMT_TOOL
+             else
+                 { echo "configure: error: Microsoft (R) Manifest Tool must be in your \$PATH." 1>&2; exit 1; }
+             fi
+         fi
+         
+         CFLAGS="$CFLAGS -W3 -nologo -GF -Gy"
++        DLLFLAGS="$DLLFLAGS $LDFLAGS"
+         DLLFLAGS="$DLLFLAGS -OUT:\"\$@\""
+         _DEBUG_FLAGS=-Z7
+         _OPTIMIZE_FLAGS=-O2
+         if test -z "$MOZ_OPTIMIZE"; then
+             CFLAGS="$CFLAGS -Od"
+         fi
+ 
+         if test -n "$USE_DEBUG_RTL"; then

@@ -1,0 +1,203 @@
+--- l10n/hu/browser/chrome/branding/brand.dtd.BAK	2005-12-11 19:44:23.781250000 +0800
++++ l10n/hu/browser/chrome/branding/brand.dtd	2005-12-11 19:47:14.328125000 +0800
+@@ -1,3 +1,3 @@
+-<!ENTITY  brandShortName        "Bon Echo">
+-<!ENTITY  brandFullName         "Bon Echo">            
++<!ENTITY  brandShortName        "Firefox">
++<!ENTITY  brandFullName         "Firefox">            
+ <!ENTITY  vendorShortName       "Mozilla">
+
+--- l10n/hu/browser/chrome/branding/brand.properties.BAK  2005-12-11 19:44:23.796875000 +0800
++++ l10n/hu/browser/chrome/branding/brand.properties      2005-12-11 19:47:18.015625000 +0800
+@@ -1,3 +1,3 @@
+-brandShortName=Bon Echo
+-brandFullName=Bon Echo
++brandShortName=Firefox
++brandFullName=Firefox
+ vendorShortName=Mozilla
+--- l10n/hu/other-licenses/branding/firefox/brand.dtd.BAK	2007-06-04 10:45:25.000000000 +0800
++++ l10n/hu/other-licenses/branding/firefox/brand.dtd	2007-06-05 19:04:32.601174100 +0800
+@@ -1,3 +1,3 @@
+ <!ENTITY  brandShortName        "Firefox">
+-<!ENTITY  brandFullName         "Mozilla Firefox">
++<!ENTITY  brandFullName         "Firefox">
+ <!ENTITY  vendorShortName       "Mozilla">
+--- l10n/hu/other-licenses/branding/firefox/brand.properties.BAK	2007-06-04 10:45:25.000000000 +0800
++++ l10n/hu/other-licenses/branding/firefox/brand.properties	2007-06-05 19:04:30.491799100 +0800
+@@ -1,5 +1,5 @@
+ brandShortName=Firefox
+-brandFullName=Mozilla Firefox
++brandFullName=Firefox
+ vendorShortName=Mozilla
+ 
+ homePageSingleStartMain=Firefox Start, gyors kezdőlap  beépített keresővel
+--- l10n/nl/browser/chrome/branding/brand.dtd.BAK	2005-12-11 19:44:23.781250000 +0800
++++ l10n/nl/browser/chrome/branding/brand.dtd	2005-12-11 19:47:14.328125000 +0800
+@@ -1,3 +1,3 @@
+-<!ENTITY  brandShortName        "Bon Echo">
+-<!ENTITY  brandFullName         "Bon Echo">            
++<!ENTITY  brandShortName        "Firefox">
++<!ENTITY  brandFullName         "Firefox">            
+ <!ENTITY  vendorShortName       "Mozilla">
+
+--- l10n/nl/browser/chrome/branding/brand.properties.BAK  2005-12-11 19:44:23.796875000 +0800
++++ l10n/nl/browser/chrome/branding/brand.properties      2005-12-11 19:47:18.015625000 +0800
+@@ -1,3 +1,3 @@
+-brandShortName=Bon Echo
+-brandFullName=Bon Echo
++brandShortName=Firefox
++brandFullName=Firefox
+ vendorShortName=Mozilla
+--- l10n/nl/other-licenses/branding/firefox/brand.dtd.BAK	2007-06-04 10:46:07.000000000 +0800
++++ l10n/nl/other-licenses/branding/firefox/brand.dtd	2007-06-05 19:00:59.835549100 +0800
+@@ -1,3 +1,3 @@
+ <!ENTITY  brandShortName        "Firefox">
+-<!ENTITY  brandFullName         "Mozilla Firefox">            
++<!ENTITY  brandFullName         "Firefox">            
+ <!ENTITY  vendorShortName       "Mozilla">
+--- l10n/nl/other-licenses/branding/firefox/brand.properties.BAK	2007-06-04 10:46:07.000000000 +0800
++++ l10n/nl/other-licenses/branding/firefox/brand.properties	2007-06-05 19:00:57.819924100 +0800
+@@ -1,5 +1,5 @@
+ brandShortName=Firefox
+-brandFullName=Mozilla Firefox
++brandFullName=Firefox
+ vendorShortName=Mozilla
+ 
+ homePageSingleStartMain=Firefox Start, een snelle startpagina met ingebouwde zoekfunctie
+--- l10n/de/browser/chrome/branding/brand.dtd.BAK	2005-12-11 19:44:23.781250000 +0800
++++ l10n/de/browser/chrome/branding/brand.dtd	2005-12-11 19:47:14.328125000 +0800
+@@ -1,3 +1,3 @@
+-<!ENTITY  brandShortName        "Bon Echo">
+-<!ENTITY  brandFullName         "Bon Echo">            
++<!ENTITY  brandShortName        "Firefox">
++<!ENTITY  brandFullName         "Firefox">            
+ <!ENTITY  vendorShortName       "Mozilla">
+ 
+--- l10n/de/browser/chrome/branding/brand.properties.BAK  2005-12-11 19:44:23.796875000 +0800
++++ l10n/de/browser/chrome/branding/brand.properties      2005-12-11 19:47:18.015625000 +0800
+@@ -1,3 +1,3 @@
+-brandShortName=Bon Echo
+-brandFullName=Bon Echo
++brandShortName=Firefox
++brandFullName=Firefox
+ vendorShortName=Mozilla
+--- l10n/de/other-licenses/branding/firefox/brand.dtd.BAK	2007-06-04 10:44:41.000000000 +0800
++++ l10n/de/other-licenses/branding/firefox/brand.dtd	2007-06-05 15:55:13.890829100 +0800
+@@ -1,3 +1,3 @@
+ <!ENTITY  brandShortName        "Firefox">
+-<!ENTITY  brandFullName         "Mozilla Firefox">            
++<!ENTITY  brandFullName         "Firefox">            
+ <!ENTITY  vendorShortName       "Mozilla">
+--- l10n/de/other-licenses/branding/firefox/brand.properties.BAK	2007-06-04 10:44:41.000000000 +0800
++++ l10n/de/other-licenses/branding/firefox/brand.properties	2007-06-05 15:55:09.422079100 +0800
+@@ -1,5 +1,5 @@
+ brandShortName=Firefox
+-brandFullName=Mozilla Firefox
++brandFullName=Firefox
+ vendorShortName=Mozilla
+ 
+ homePageSingleStartMain=Firefox Start, eine schnelle Startseite mit integrierter Suche
+--- l10n/ja/browser/chrome/branding/brand.dtd.BAK	2005-12-11 19:44:23.781250000 +0800
++++ l10n/ja/browser/chrome/branding/brand.dtd	2005-12-11 19:47:14.328125000 +0800
+@@ -1,3 +1,3 @@
+-<!ENTITY  brandShortName        "Bon Echo">
+-<!ENTITY  brandFullName         "Bon Echo">
++<!ENTITY  brandShortName        "Firefox">
++<!ENTITY  brandFullName         "Firefox">
+ <!ENTITY  vendorShortName       "Mozilla">
+ 
+--- l10n/ja/browser/chrome/branding/brand.properties.BAK  2005-12-11 19:44:23.796875000 +0800
++++ l10n/ja/browser/chrome/branding/brand.properties      2005-12-11 19:47:18.015625000 +0800
+@@ -1,3 +1,3 @@
+-brandShortName=Bon Echo
+-brandFullName=Bon Echo
++brandShortName=Firefox
++brandFullName=Firefox
+ vendorShortName=Mozilla
+--- l10n/ja/other-licenses/branding/firefox/brand.dtd.BAK	2007-06-04 10:45:40.000000000 +0800
++++ l10n/ja/other-licenses/branding/firefox/brand.dtd	2007-06-05 15:50:51.859579100 +0800
+@@ -1,3 +1,3 @@
+ <!ENTITY  brandShortName	"Firefox">
+-<!ENTITY  brandFullName		"Mozilla Firefox">
++<!ENTITY  brandFullName		"Firefox">
+ <!ENTITY  vendorShortName	"Mozilla">
+--- l10n/ja/other-licenses/branding/firefox/brand.properties.BAK	2007-06-04 10:45:40.000000000 +0800
++++ l10n/ja/other-licenses/branding/firefox/brand.properties	2007-06-05 15:50:54.328329100 +0800
+@@ -1,5 +1,5 @@
+ brandShortName			= Firefox
+-brandFullName			= Mozilla Firefox
++brandFullName			= Firefox
+ vendorShortName			= Mozilla
+ 
+ homePageSingleStartMain		= Firefox Start - 組み込みの検索エンジンによるスタートページ
+--- l10n/zh-CN/browser/chrome/branding/brand.dtd.BAK	2005-12-11 19:44:23.781250000 +0800
++++ l10n/zh-CN/browser/chrome/branding/brand.dtd	2005-12-11 19:47:14.328125000 +0800
+@@ -1,3 +1,3 @@
+-<!ENTITY  brandShortName        "Bon Echo">
+-<!ENTITY  brandFullName         "Bon Echo">            
++<!ENTITY  brandShortName        "Firefox">
++<!ENTITY  brandFullName         "Firefox">            
+ <!ENTITY  vendorShortName       "Mozilla">
+ 
+--- l10n/zh-CN/browser/chrome/branding/brand.properties.BAK  2005-12-11 19:44:23.796875000 +0800
++++ l10n/zh-CN/browser/chrome/branding/brand.properties      2005-12-11 19:47:18.015625000 +0800
+@@ -1,5 +1,5 @@
+ #Translated with MozillaTranslator version 5.03
+ #Fri Mar 24 01:52:59 CST 2006
+-brandShortName=Bon Echo
++brandShortName=Firefox
+ vendorShortName=Mozilla
+-brandFullName=Bon Echo
++brandFullName=Firefox
+--- l10n/zh-CN/other-licenses/branding/firefox/brand.dtd.BAK	2007-06-04 10:47:05.000000000 +0800
++++ l10n/zh-CN/other-licenses/branding/firefox/brand.dtd	2007-06-05 15:47:19.156454100 +0800
+@@ -1,3 +1,3 @@
+ <!ENTITY  brandShortName        "Firefox">
+-<!ENTITY  brandFullName         "Mozilla Firefox">
++<!ENTITY  brandFullName         "Firefox">
+ <!ENTITY  vendorShortName       "Mozilla">
+--- l10n/zh-CN/other-licenses/branding/firefox/brand.properties.BAK	2007-06-04 10:47:05.000000000 +0800
++++ l10n/zh-CN/other-licenses/branding/firefox/brand.properties	2007-06-05 15:43:31.890829100 +0800
+@@ -1,5 +1,5 @@
+ brandShortName = Firefox
+-brandFullName = Mozilla Firefox
++brandFullName = Firefox
+ vendorShortName = Mozilla
+ homePageSingleStartMain = Firefox 起始页，内建的快速搜索主页
+ homePageImport = 从 %S 导入您的主页
+--- l10n/zh-TW/browser/chrome/branding/brand.dtd.BAK	2005-12-11 19:44:23.781250000 +0800
++++ l10n/zh-TW/browser/chrome/branding/brand.dtd	2005-12-11 19:47:14.328125000 +0800
+@@ -1,4 +1,4 @@
+ <!-- Generated by MozLCDB, http://moztw.org/tools/mozlcdb -->
+-<!ENTITY  brandShortName        "Firefox">
+-<!ENTITY  brandFullName         "Firefox">            
++<!ENTITY  brandShortName        "Firefox">
++<!ENTITY  brandFullName         "Firefox">            
+ <!ENTITY vendorShortName "Mozilla">
+--- l10n/zh-TW/browser/chrome/branding/brand.properties.BAK  2005-12-11 19:44:23.796875000 +0800
++++ l10n/zh-TW/browser/chrome/branding/brand.properties      2005-12-11 19:47:18.015625000 +0800
+@@ -1,4 +1,4 @@
+ # Generated by MozLCDB, http://moztw.org/tools/mozlcdb
+-brandShortName=Firefox
+-brandFullName=Firefox
++brandShortName=Firefox
++brandFullName=Firefox
+ vendorShortName=Mozilla
+--- l10n/zh-TW/other-licenses/branding/firefox/brand.dtd.BAK	2007-06-04 10:47:10.000000000 +0800
++++ l10n/zh-TW/other-licenses/branding/firefox/brand.dtd	2007-06-05 13:52:43.247234700 +0800
+@@ -1,4 +1,4 @@
+ <!-- Generated by MozLCDB, http://moztw.org/tools/mozlcdb -->
+ <!ENTITY brandShortName "Firefox">
+-<!ENTITY brandFullName "Mozilla Firefox">
++<!ENTITY brandFullName "Firefox">
+ <!ENTITY vendorShortName "Mozilla">
+--- l10n/zh-TW/other-licenses/branding/firefox/brand.properties.BAK	2007-06-04 10:47:10.000000000 +0800
++++ l10n/zh-TW/other-licenses/branding/firefox/brand.properties	2007-06-05 13:52:44.606609700 +0800
+@@ -1,6 +1,6 @@
+ # Generated by MozLCDB, http://moztw.org/tools/mozlcdb
+ brandShortName=Firefox
+-brandFullName=Mozilla Firefox
++brandFullName=Firefox
+ vendorShortName=Mozilla
+ 
+ homePageSingleStartMain=Firefox Start/uff0c/u7d50/u5408/u5feb/u901f/u641c/u5c0b/u7684/u9996/u9801

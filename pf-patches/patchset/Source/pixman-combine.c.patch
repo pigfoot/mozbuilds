@@ -1,0 +1,88 @@
+Index: gfx/cairo/libpixman/src/pixman-combine.c
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/cairo/libpixman/src/pixman-combine.c,v
+retrieving revision 1.5
+diff -u -8 -p -r1.5 pixman-combine.c
+--- gfx/cairo/libpixman/src/pixman-combine.c	7 Apr 2008 05:09:45 -0000	1.5
++++ gfx/cairo/libpixman/src/pixman-combine.c	13 Oct 2008 08:39:20 -0000
+@@ -33,22 +33,30 @@ pixman_fbCombineMaskU (uint32_t *src, co
+  */
+ 
+ FASTCALL static void
+ fbCombineClear (uint32_t *dest, const uint32_t *src, int width)
+ {
+     memset(dest, 0, width*sizeof(uint32_t));
+ }
+ 
+-FASTCALL static void
++FASTCALL void
+ fbCombineSrcU (uint32_t *dest, const uint32_t *src, int width)
+ {
+     memcpy(dest, src, width*sizeof(uint32_t));
+ }
+ 
++#ifdef TT_MEMUTIL
++FASTCALL void
++fbCombineSrcU_nontemporal (uint32_t *dest, const uint32_t *src, int width)
++{
++    memcpy_nontemporal_tt(dest, src, width*sizeof(uint32_t));
++}
++#endif
++
+ /* if the Src is opaque, call fbCombineSrcU */
+ FASTCALL static void
+ fbCombineOverU (uint32_t *dest, const uint32_t *src, int width)
+ {
+     int i;
+     for (i = 0; i < width; ++i) {
+         uint32_t s = *(src + i);
+         uint32_t d = *(dest + i);
+@@ -73,21 +81,45 @@ fbCombineOverReverseU (uint32_t *dest, c
+     }
+ }
+ 
+ /* if the Dst is opaque, call fbCombineSrcU */
+ FASTCALL static void
+ fbCombineInU (uint32_t *dest, const uint32_t *src, int width)
+ {
+     int i;
+-    for (i = 0; i < width; ++i) {
+-        uint32_t s = *(src + i);
+-        uint32_t a = Alpha(*(dest + i));
++    uint32_t s_old;
++    uint32_t a_old;
++    uint32_t result_old;
++
++    if (width >= 1) {
++        uint32_t s = *(src);
++        uint32_t a = Alpha(*(dest));
++
++        s_old = s;
++        a_old = a;
+         FbByteMul(s, a);
++        result_old = s;
++	*(dest) = s;
++
++        for (i = 1; i < width; ++i) {
++            uint32_t s = *(src + i);
++            uint32_t a = Alpha(*(dest + i));
++
++            if (s == s_old &&
++                a == a_old) {
++	*(dest + i) = result_old;
++            } else {
++                s_old = s;
++                a_old = a;
++                FbByteMul(s, a);
++                result_old = s;
+ 	*(dest + i) = s;
++            }
++        }
+     }
+ }
+ 
+ /* if the Src is opaque, this is a noop */
+ FASTCALL static void
+ fbCombineInReverseU (uint32_t *dest, const uint32_t *src, int width)
+ {
+     int i;

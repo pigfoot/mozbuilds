@@ -1,0 +1,40 @@
+Index: js/src/jsstr.h
+===================================================================
+RCS file: /cvsroot/mozilla/js/src/jsstr.h,v
+retrieving revision 3.61
+diff -u -8 -p -r3.61 jsstr.h
+--- js/src/jsstr.h	29 Apr 2008 06:19:42 -0000	3.61
++++ js/src/jsstr.h	14 Dec 2008 07:46:59 -0000
+@@ -530,17 +530,32 @@ extern size_t
+ js_strlen(const jschar *s);
+ 
+ extern jschar *
+ js_strchr(const jschar *s, jschar c);
+ 
+ extern jschar *
+ js_strchr_limit(const jschar *s, jschar c, const jschar *limit);
+ 
++#if _MSC_VER >= 1400
++/* #include <intrin.h> */
++#ifdef  __cplusplus
++extern "C" {
++#endif
++void __movsw(unsigned short *Dest, unsigned short *Source, size_t Count);
++#pragma intrinsic(__movsw)
++#define js_strncpy(t, s, n)     (((n) <= 30) ? \
++    (__movsw((unsigned short *)(t), (unsigned short *)(s), (n)), (t)) : \
++    (memcpy((t), (s), (n) * sizeof(jschar))))
++#ifdef  __cplusplus
++}
++#endif
++#else
+ #define js_strncpy(t, s, n)     memcpy((t), (s), (n) * sizeof(jschar))
++#endif
+ 
+ /*
+  * Return s advanced past any Unicode white space characters.
+  */
+ extern const jschar *
+ js_SkipWhiteSpace(const jschar *s, const jschar *end);
+ 
+ /*

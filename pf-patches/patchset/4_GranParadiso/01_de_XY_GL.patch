@@ -1,0 +1,11 @@
+--- mozilla/js/src/xpconnect/src/Makefile.in.bak	2004-01-07 21:36:33.000000000 +0800
++++ mozilla/js/src/xpconnect/src/Makefile.in	2004-05-11 10:26:34.765625000 +0800
+@@ -156,7 +156,7 @@
+ # whole program optimization and precompiled headers are incompatible
+ ifeq (,$(findstring GL,$(CXXFLAGS)))
+ # use pre-compiled headers
+-CXXFLAGS	+= -YX -Fp$(LIBRARY_NAME).pch
++CXXFLAGS	+= -Fp$(LIBRARY_NAME).pch
+ # precompiled headers require write access to .pch which breaks -j builds
+ .NOTPARALLEL::
+ endif

@@ -1,0 +1,31 @@
+Index: modules/libimg/png/Makefile.in
+===================================================================
+RCS file: /cvsroot/mozilla/modules/libimg/png/Makefile.in,v
+retrieving revision 1.37
+diff -u -8 -p -r1.37 Makefile.in
+--- modules/libimg/png/Makefile.in	19 Jan 2008 01:09:37 -0000	1.37
++++ modules/libimg/png/Makefile.in	1 Mar 2008 05:34:10 -0000
+@@ -44,23 +44,16 @@ include $(DEPTH)/config/autoconf.mk
+ 
+ MODULE		= png
+ LIBRARY_NAME	= mozpng
+ ifeq ($(OS_ARCH),WINNT)
+ LIBRARY_NAME	= png
+ endif
+ LIBXUL_LIBRARY = 1
+ 
+-ifndef GNU_CC
+-ifeq ($(OS_ARCH),WINNT)
+-# FIXME: bug 413019
+-OS_COMPILE_CFLAGS += -GL-
+-endif
+-endif
+-
+ REQUIRES	= $(ZLIB_REQUIRES) \
+ 		  $(NULL)
+ 
+ CSRCS		= \
+ 		png.c \
+ 		pngerror.c \
+ 		pngget.c \
+ 		pngmem.c \

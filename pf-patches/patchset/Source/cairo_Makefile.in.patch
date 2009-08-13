@@ -1,0 +1,26 @@
+Index: gfx/cairo/cairo/src/Makefile.in
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/cairo/cairo/src/Makefile.in,v
+retrieving revision 1.54
+diff -u -8 -p -r1.54 Makefile.in
+--- gfx/cairo/cairo/src/Makefile.in	19 Feb 2008 22:53:02 -0000	1.54
++++ gfx/cairo/cairo/src/Makefile.in	1 Mar 2008 05:27:26 -0000
+@@ -55,18 +55,16 @@ LIBXUL_LIBRARY = 1
+ 
+ ifdef GNU_CC
+ MODULE_OPTIMIZE_FLAGS = -O2
+ else
+ ifeq ($(OS_ARCH),SunOS)
+ MODULE_OPTIMIZE_FLAGS = -xO5
+ endif
+ ifeq ($(OS_ARCH),WINNT)
+-# FIXME: bug 413019
+-OS_COMPILE_CFLAGS += -GL-
+ MODULE_OPTIMIZE_FLAGS = -O2
+ endif
+ endif
+ 
+ REQUIRES        = $(PNG_REQUIRES) \
+                   $(ZLIB_REQUIRES) \
+                   libpixman \
+                   $(NULL)

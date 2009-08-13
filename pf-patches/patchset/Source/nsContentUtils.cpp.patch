@@ -1,0 +1,72 @@
+Index: content/base/src/nsContentUtils.cpp
+===================================================================
+RCS file: /cvsroot/mozilla/content/base/src/nsContentUtils.cpp,v
+retrieving revision 1.308
+diff -u -8 -p -r1.308 nsContentUtils.cpp
+--- content/base/src/nsContentUtils.cpp	2 May 2008 14:50:42 -0000	1.308
++++ content/base/src/nsContentUtils.cpp	12 May 2008 10:13:59 -0000
+@@ -2945,50 +2945,64 @@ nsContentUtils::DispatchTrustedEvent(nsI
+   rv = privateEvent->SetTrusted(PR_TRUE);
+   NS_ENSURE_SUCCESS(rv, rv);
+ 
+   PRBool dummy;
+   return target->DispatchEvent(event, aDefaultAction ? aDefaultAction : &dummy);
+ }
+ 
+ /* static */
++#ifdef _MSC_VER
++#pragma inline_recursion(on)
++#endif
++inline
+ nsIContent*
+ nsContentUtils::MatchElementId(nsIContent *aContent, nsIAtom* aId)
+ {
+   if (aId == aContent->GetID()) {
+     return aContent;
+   }
+   
+   nsIContent *result = nsnull;
+   PRUint32 i, count = aContent->GetChildCount();
+ 
+   for (i = 0; i < count && result == nsnull; i++) {
+     result = MatchElementId(aContent->GetChildAt(i), aId);
+   }
+ 
+   return result;
+ }
++#ifdef _MSC_VER
++#pragma inline_recursion(off)
++#endif
+ 
+ // Id attribute matching function used by nsXMLDocument and
+ // nsHTMLDocument and others.
+ /* static */
++#ifdef _MSC_VER
++#pragma inline_recursion(on)
++#endif
++inline
+ nsIContent *
+ nsContentUtils::MatchElementId(nsIContent *aContent, const nsAString& aId)
+ {
+   NS_PRECONDITION(!aId.IsEmpty(), "Will match random elements");
+   
+   // ID attrs are generally stored as atoms, so just atomize this up front
+   nsCOMPtr<nsIAtom> id(do_GetAtom(aId));
+   if (!id) {
+     // OOM, so just bail
+     return nsnull;
+   }
+ 
+   return MatchElementId(aContent, id);
+ }
++#ifdef _MSC_VER
++#pragma inline_recursion(off)
++#endif
+ 
+ // Convert the string from the given charset to Unicode.
+ /* static */
+ nsresult
+ nsContentUtils::ConvertStringFromCharset(const nsACString& aCharset,
+                                          const nsACString& aInput,
+                                          nsAString& aOutput)
+ {

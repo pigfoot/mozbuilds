@@ -1,0 +1,107 @@
+Index: js/src/jsdhash.c
+===================================================================
+RCS file: /cvsroot/mozilla/js/src/jsdhash.c,v
+retrieving revision 1.48
+diff -u -8 -p -r1.48 jsdhash.c
+--- js/src/jsdhash.c	30 Jan 2008 02:36:33 -0000	1.48
++++ js/src/jsdhash.c	19 Mar 2008 21:59:28 -0000
+@@ -36,16 +36,19 @@
+  * the provisions above, a recipient may use your version of this file under
+  * the terms of any one of the MPL, the GPL or the LGPL.
+  *
+  * ***** END LICENSE BLOCK ***** */
+ 
+ /*
+  * Double hashing implementation.
+  */
++#if _MSC_VER >= 1400
++#include <intrin.h>
++#endif
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include "jsbit.h"
+ #include "jsdhash.h"
+ #include "jsutil.h"     /* for JS_ASSERT */
+ 
+ #ifdef JS_DHASHMETER
+@@ -136,23 +139,39 @@ JS_DHashMatchStringKey(JSDHashTable *tab
+             strcmp((const char *) stub->key, (const char *) key) == 0);
+ }
+ 
+ JS_PUBLIC_API(void)
+ JS_DHashMoveEntryStub(JSDHashTable *table,
+                       const JSDHashEntryHdr *from,
+                       JSDHashEntryHdr *to)
+ {
++#if _MSC_VER >= 1400
++    if ((table->entrySize & 3) == 0) {
++        __movsd((unsigned long*)to, (unsigned long*)from, table->entrySize >> 2);
++    } else {
++        memcpy(to, from, table->entrySize);
++    }
++#else
+     memcpy(to, from, table->entrySize);
++#endif
+ }
+ 
+ JS_PUBLIC_API(void)
+ JS_DHashClearEntryStub(JSDHashTable *table, JSDHashEntryHdr *entry)
+ {
++#if _MSC_VER >= 1400
++    if ((table->entrySize & 3) == 0) {
++        __stosd((unsigned long*)entry, 0, table->entrySize >> 2);
++    } else {
++        memset(entry, 0, table->entrySize);
++    }
++#else
+     memset(entry, 0, table->entrySize);
++#endif
+ }
+ 
+ JS_PUBLIC_API(void)
+ JS_DHashFreeStringKey(JSDHashTable *table, JSDHashEntryHdr *entry)
+ {
+     const JSDHashEntryStub *stub = (const JSDHashEntryStub *)entry;
+ 
+     free((void *) stub->key);
+@@ -537,17 +556,39 @@ ChangeTable(JSDHashTable *table, int del
+ #ifdef DEBUG
+     recursionLevel = RECURSION_LEVEL(table);
+ #endif
+     table->hashShift = JS_DHASH_BITS - newLog2;
+     table->removedCount = 0;
+     table->generation++;
+ 
+     /* Assign the new entry store to table. */
++#ifdef TT_MEMUTIL
++    {
++        static JSBool initialized = JS_FALSE;
++        static JSUint32 dwNonTemporalDataSizeMin = NON_TEMPORAL_STORES_NOT_SUPPORTED;
++
++        if (!initialized) {
++            dwNonTemporalDataSizeMin = GetNonTemporalDataSizeMin_tt();
++            initialized = JS_TRUE;
++        }
++
++        if (nbytes < dwNonTemporalDataSizeMin ||
++            NON_TEMPORAL_STORES_NOT_SUPPORTED == dwNonTemporalDataSizeMin)
++        {
++            memset(newEntryStore, 0, nbytes);
++        }
++        else
++        {
++            memset_nontemporal_tt(newEntryStore, 0, nbytes);
++        }
++    }
++#else
+     memset(newEntryStore, 0, nbytes);
++#endif
+     oldEntryAddr = oldEntryStore = table->entryStore;
+     table->entryStore = newEntryStore;
+     moveEntry = table->ops->moveEntry;
+ #ifdef DEBUG
+     RECURSION_LEVEL(table) = recursionLevel;
+ #endif
+ 
+     /* Copy only live entries, leaving removed ones behind. */

@@ -1,0 +1,28 @@
+Index: memory/jemalloc/apply-ed-patches.pl
+===================================================================
+RCS file: /cvsroot/mozilla/memory/jemalloc/apply-ed-patches.pl,v
+retrieving revision 1.1
+diff -u -8 -p -r1.1 apply-ed-patches.pl
+--- memory/jemalloc/apply-ed-patches.pl	4 Feb 2008 15:17:11 -0000	1.1
++++ memory/jemalloc/apply-ed-patches.pl	19 Jul 2008 02:43:49 -0000
+@@ -41,18 +41,18 @@
+ use FileHandle;
+ 
+ sub do_patch {
+   my ($ed, $target_file, $patch_file, $fh) = @_;
+   # these keep winding up read only for me
+   chmod 0666, $target_file;
+   print $fh "w\n";
+   $fh->close();
+-  print "$ed - $target_file < $patch_file\n";
+-  system "$ed - $target_file < $patch_file\n";
++  print "$ed -s $target_file < $patch_file\n";
++  system "$ed -s $target_file < $patch_file\n";
+ }
+ 
+ my $header_done = 0;
+ my ($target_file,$patch_file) = ('','');
+ my $source_patch = $ARGV[0];
+ my $srcdir = $ARGV[1];
+ my $ed = $ARGV[2];
+ $srcdir = "$srcdir/" unless $srcdir =~ m|/$|;

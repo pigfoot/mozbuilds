@@ -1,0 +1,303 @@
+Index: gfx/src/thebes/nsThebesImage.cpp
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/src/thebes/nsThebesImage.cpp,v
+retrieving revision 1.86
+diff -u -8 -p -r1.86 nsThebesImage.cpp
+--- gfx/src/thebes/nsThebesImage.cpp	28 Apr 2008 21:27:05 -0000	1.86
++++ gfx/src/thebes/nsThebesImage.cpp	16 Oct 2008 09:02:40 -0000
+@@ -75,21 +75,29 @@ nsThebesImage::nsThebesImage()
+             gDisableOptimize = PR_TRUE;
+         }
+         hasCheckedOptimize = PR_TRUE;
+     }
+ 
+ #ifdef XP_WIN
+     mIsDDBSurface = PR_FALSE;
+ #endif
++
++#ifdef XP_WIN
++    ResetScaledSurface();
++#endif
+ }
+ 
+ nsresult
+ nsThebesImage::Init(PRInt32 aWidth, PRInt32 aHeight, PRInt32 aDepth, nsMaskRequirements aMaskRequirements)
+ {
++#ifdef XP_WIN
++    ResetScaledSurface();
++#endif
++
+     mWidth = aWidth;
+     mHeight = aHeight;
+ 
+     // Reject over-wide or over-tall images.
+     if (!AllowedImageSize(aWidth, aHeight))
+         return NS_ERROR_FAILURE;
+ 
+     gfxImageSurface::gfxImageFormat format;
+@@ -144,16 +152,18 @@ nsThebesImage::Init(PRInt32 aWidth, PRIn
+ 
+ nsThebesImage::~nsThebesImage()
+ {
+ #ifdef XP_WIN
+     if (mIsDDBSurface) {
+         gTotalDDBs--;
+         gTotalDDBSize -= mWidth*mHeight*4;
+     }
++
++    ResetScaledSurface();
+ #endif
+ }
+ 
+ PRInt32
+ nsThebesImage::GetBytesPix()
+ {
+     return 4;
+ }
+@@ -206,16 +216,20 @@ PRInt32
+ nsThebesImage::GetAlphaLineStride()
+ {
+     return (mAlphaDepth > 0) ? mStride : 0;
+ }
+ 
+ void
+ nsThebesImage::ImageUpdated(nsIDeviceContext *aContext, PRUint8 aFlags, nsRect *aUpdateRect)
+ {
++#ifdef XP_WIN
++    ResetScaledSurface();
++#endif
++
+     mDecoded.UnionRect(mDecoded, *aUpdateRect);
+ #ifdef XP_MACOSX
+     if (mQuartzSurface)
+         mQuartzSurface->Flush();
+ #endif
+ }
+ 
+ PRBool
+@@ -224,16 +238,20 @@ nsThebesImage::GetIsImageComplete()
+     if (!mImageComplete)
+         mImageComplete = (mDecoded == nsRect(0, 0, mWidth, mHeight));
+     return mImageComplete;
+ }
+ 
+ nsresult
+ nsThebesImage::Optimize(nsIDeviceContext* aContext)
+ {
++#ifdef XP_WIN
++    ResetScaledSurface();
++#endif
++
+     if (gDisableOptimize)
+         return NS_OK;
+ 
+     if (mOptSurface || mSinglePixel)
+         return NS_OK;
+ 
+     /* Figure out if the entire image is a constant color */
+ 
+@@ -363,16 +381,20 @@ void *
+ nsThebesImage::GetBitInfo()
+ {
+     return NULL;
+ }
+ 
+ NS_IMETHODIMP
+ nsThebesImage::LockImagePixels(PRBool aMaskPixels)
+ {
++#ifdef XP_WIN
++    ResetScaledSurface();
++#endif
++
+     if (aMaskPixels)
+         return NS_ERROR_NOT_IMPLEMENTED;
+     if ((mOptSurface || mSinglePixel) && !mImageSurface) {
+         // Recover the pixels
+         mImageSurface = new gfxImageSurface(gfxIntSize(mWidth, mHeight),
+                                             gfxImageSurface::ImageFormatARGB32);
+         if (!mImageSurface || mImageSurface->CairoStatus())
+             return NS_ERROR_OUT_OF_MEMORY;
+@@ -386,23 +408,26 @@ nsThebesImage::LockImagePixels(PRBool aM
+ 
+ #ifdef XP_WIN
+         mWinSurface = nsnull;
+ #endif
+ #ifdef XP_MACOSX
+         mQuartzSurface = nsnull;
+ #endif
+     }
+-
+     return NS_OK;
+ }
+ 
+ NS_IMETHODIMP
+ nsThebesImage::UnlockImagePixels(PRBool aMaskPixels)
+ {
++#ifdef XP_WIN
++    ResetScaledSurface();
++#endif
++
+     if (aMaskPixels)
+         return NS_ERROR_NOT_IMPLEMENTED;
+     mOptSurface = nsnull;
+ #ifdef XP_MACOSX
+     if (mQuartzSurface)
+         mQuartzSurface->Flush();
+ #endif
+     return NS_OK;
+@@ -599,20 +624,140 @@ nsThebesImage::Draw(nsIRenderingContext 
+             pat->SetExtend(gfxPattern::EXTEND_PAD);
+         break;
+     }
+ 
+     gfxContext::GraphicsOperator op = ctx->CurrentOperator();
+     if (op == gfxContext::OPERATOR_OVER && mFormat == gfxASurface::ImageFormatRGB24)
+         ctx->SetOperator(gfxContext::OPERATOR_SOURCE);
+ 
++#ifdef XP_WIN
++    PRBool bSubRectEqualSrcRect = (subimageRect == gfxRect(0, 0, mWidth, mHeight));
++    PRBool bScaled = (target->GetType() == gfxASurface::SurfaceTypeWin32 &&
++                      GetIsImageComplete() &&
++                      (xscale != 1.0 || yscale != 1.0 || ctxHasNonTranslation));
++    gfxFloat mDrawAreaRatio = (destRect.size.width * destRect.size.height) /
++                              ((mWidth * xscale) * (mHeight * yscale));
++
++#define SCALE_EQUAL_PERMISSIBLE           0.1
++#define SCALE_NEAREST_PERMISSIBLE         1.00001
++#define SCALE_FORCEMAKECACHE_THRESHOLD    0.4
++#define SCALE_FORCEMAKECACHE_THRESHOLD_WITH_COUNTER   0.2
++#define SCALE_CACHEDDRAW_REQUIRED_COUNTS  2
++#define SCALE_FORCEMAKECACHE_COUNTS       10
++
++    const gfxFloat mTargetWidth = (gfxFloat)mWidth * xscale;
++    const gfxFloat mTargetHeight = (gfxFloat)mHeight * yscale;
++    const gfxFloat mTargetWidthFabs = fabs(mTargetWidth_old - mTargetWidth);
++    const gfxFloat mTargetHeightFabs = fabs(mTargetHeight_old - mTargetHeight);
++    const PRBool bTargetScaleEqual = (mTargetWidthFabs < SCALE_EQUAL_PERMISSIBLE &&
++                                      mTargetHeightFabs < SCALE_EQUAL_PERMISSIBLE);
++
++    if (mTargetWidthFabs >= SCALE_NEAREST_PERMISSIBLE ||
++        mTargetHeightFabs >= SCALE_NEAREST_PERMISSIBLE) {
++        ResetScaledSurface();
++        mTargetWidth_old = mTargetWidth;
++        mTargetHeight_old = mTargetHeight;
++    }
++
++    if (bScaled) {
++        if (bSubRectEqualSrcRect && mScaledImageSurface == nsnull) {
++            if (!mMakeScaledImage &&
++                mDrawAreaRatio >= SCALE_FORCEMAKECACHE_THRESHOLD) {
++                mMakeScaledImage = PR_TRUE;
++            }
++
++            if (mMakeScaledImage) {
++                // Create a scaled image surface
++                mScaledImageSurface = new gfxImageSurface(gfxIntSize(NS_lroundf(mWidth * xscale),
++                    NS_lroundf(mHeight * yscale)), gfxASurface::ImageFormatARGB32);
++                if (mScaledImageSurface && !mScaledImageSurface->CairoStatus()) {
++                    gfxContext ctx_cached(mScaledImageSurface);
++
++                    // Get the source image surface
++                    nsRefPtr<gfxPattern> gfxpat;
++                    this->GetPattern(getter_AddRefs(gfxpat));
++
++                    // Save status
++                    gfxMatrix gmtold = gfxpat->GetMatrix();
++                    gfxPattern::GraphicsExtend gexold = gfxpat->Extend();
++
++                    // Set scaling
++                    gfxMatrix mat2;
++                    mat2.Translate(gfxPoint(0, 0));
++                    mat2.Scale(1.0 / xscale, 1.0 / yscale);
++                    gfxpat->SetMatrix(mat2);
++
++                    // turn on EXTEND_PAD
++                    gfxpat->SetExtend(gfxPattern::EXTEND_PAD);
++
++                    // Paint a scaled image
++                    ctx_cached.SetOperator(gfxContext::OPERATOR_SOURCE);
++                    ctx_cached.SetPattern(gfxpat);
++                    ctx_cached.Paint();
++
++                    // Restore status
++                    gfxpat->SetMatrix(gmtold);
++                    gfxpat->SetExtend(gexold);
++                } else {
++                    ResetScaledSurface();
++                }
++            }
++        }
++    }
++
++    if (mScaledImageSurface) {
++        nsRefPtr<gfxPattern> pat2 = new gfxPattern(mScaledImageSurface);
++        gfxFloat mWidthScale =  mScaledImageSurface->GetSize().width / mTargetWidth;
++        gfxFloat mHeightScale = mScaledImageSurface->GetSize().height / mTargetHeight;
++        gfxMatrix mat2;
++
++        mat2.Translate(gfxPoint(srcRect.pos.x * xscale * mWidthScale, srcRect.pos.y * yscale * mHeightScale));
++        if (bTargetScaleEqual)
++            mat2.Scale(1.0, 1.0);
++        else
++            mat2.Scale(mWidthScale, mHeightScale);
++        mat2.Translate(-destRect.pos);
++        pat2->SetMatrix(mat2);
++
++        pat2->SetExtend(pat->Extend());
++        pat2->SetFilter(0);
++
++        ctx->NewPath();
++        ctx->SetPattern(pat2);
++        ctx->Rectangle(destRect);
++        ctx->Fill();
++    } else {
++        ctx->NewPath();
++        ctx->SetPattern(pat);
++        ctx->Rectangle(destRect);
++        ctx->Fill();
++    }
++#else
+     ctx->NewPath();
+     ctx->SetPattern(pat);
+     ctx->Rectangle(destRect);
+     ctx->Fill();
++#endif
++
++#ifdef XP_WIN
++    if (bScaled) {
++        if (!mMakeScaledImage) {
++            if (bSubRectEqualSrcRect) {
++                mScaledDrawCounts++;
++                if (mDrawAreaRatio >= SCALE_FORCEMAKECACHE_THRESHOLD_WITH_COUNTER)
++                    mCachedDrawRequiredCounts++;
++            }
++
++            if (mCachedDrawRequiredCounts >= SCALE_CACHEDDRAW_REQUIRED_COUNTS ||
++                mScaledDrawCounts >= SCALE_FORCEMAKECACHE_COUNTS)
++                mMakeScaledImage = PR_TRUE;
++        }
++    }
++#endif
+ 
+     ctx->SetOperator(op);
+     ctx->SetDeviceColor(gfxRGBA(0,0,0,0));
+ 
+     return NS_OK;
+ }
+ 
+ nsresult
+@@ -836,11 +981,14 @@ nsThebesImage::ShouldUseImageSurfaces()
+ // after Optimize() is called, though in all cases it will be just a
+ // performance win -- the pixels are still correct and have the A byte
+ // set to 0xff.
+ void
+ nsThebesImage::SetHasNoAlpha()
+ {
+     if (mFormat == gfxASurface::ImageFormatARGB32) {
+         mFormat = gfxASurface::ImageFormatRGB24;
++#ifdef XP_WIN
++        ResetScaledSurface();
++#endif
+         mFormatChanged = PR_TRUE;
+     }
+ }

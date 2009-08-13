@@ -1,0 +1,94 @@
+Index: modules/plugin/base/src/nsPluginNativeWindowWin.cpp
+===================================================================
+RCS file: /cvsroot/mozilla/modules/plugin/base/src/nsPluginNativeWindowWin.cpp,v
+retrieving revision 1.24
+diff -u -8 -p -r1.24 nsPluginNativeWindowWin.cpp
+--- modules/plugin/base/src/nsPluginNativeWindowWin.cpp	27 Feb 2008 04:35:20 -0000	1.24
++++ modules/plugin/base/src/nsPluginNativeWindowWin.cpp	1 Mar 2008 04:49:49 -0000
+@@ -57,17 +57,28 @@
+ #include "nsPluginSafety.h"
+ #include "nsPluginNativeWindow.h"
+ #include "nsThreadUtils.h"
+ #include "nsAutoPtr.h"
+ #include "nsTWeakRef.h"
+ 
+ static NS_DEFINE_CID(kCPluginManagerCID, NS_PLUGINMANAGER_CID); // needed for NS_TRY_SAFE_CALL
+ 
+-#define NS_PLUGIN_WINDOW_PROPERTY_ASSOCIATION "MozillaPluginWindowPropertyAssociation"
++class CAtom_MozillaPluginWindowPropertyAssociation {
++public:
++  CAtom_MozillaPluginWindowPropertyAssociation() {
++    atom = ::GlobalAddAtomW(L"MozillaPluginWindowPropertyAssociation");
++  }
++  ~CAtom_MozillaPluginWindowPropertyAssociation() {
++    ::GlobalDeleteAtom(atom);
++  }
++  ATOM atom;
++};
++static CAtom_MozillaPluginWindowPropertyAssociation gaMpwpa;
++#define NS_PLUGIN_WINDOW_PROPERTY_ASSOCIATION ((LPCWSTR)(DWORD)gaMpwpa.atom)
+ 
+ typedef nsTWeakRef<class nsPluginNativeWindowWin> PluginWindowWeakRef;
+ 
+ /**
+  *  PLEvent handling code
+  */
+ class PluginWindowEvent : public nsRunnable {
+ public:
+@@ -198,17 +209,17 @@ NS_IMETHODIMP nsDelayedPopupsEnabledEven
+   return NS_OK;	
+ }
+ 
+ /**
+  *   New plugin window procedure
+  */
+ static LRESULT CALLBACK PluginWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+ {
+-  nsPluginNativeWindowWin * win = (nsPluginNativeWindowWin *)::GetProp(hWnd, NS_PLUGIN_WINDOW_PROPERTY_ASSOCIATION);
++  nsPluginNativeWindowWin * win = (nsPluginNativeWindowWin *)::GetPropW(hWnd, NS_PLUGIN_WINDOW_PROPERTY_ASSOCIATION);
+   if (!win)
+     return TRUE;
+ 
+   // The DispatchEvent(NS_PLUGIN_ACTIVATE) below can trigger a reentrant focus
+   // event which might destroy us.  Hold a strong ref on the plugin instance
+   // to prevent that, bug 374229.
+   nsCOMPtr<nsIPluginInstance> inst;
+   win->GetPluginInstance(inst);
+@@ -521,34 +532,34 @@ nsresult nsPluginNativeWindowWin::Subcla
+   WNDPROC currentWndProc = (WNDPROC)::GetWindowLong(hWnd, GWL_WNDPROC);
+   if (PluginWndProc == currentWndProc)
+     return NS_OK;
+ 
+   mPluginWinProc = SubclassWindow(hWnd, (LONG)PluginWndProc);
+   if (!mPluginWinProc)
+     return NS_ERROR_FAILURE;
+ 
+-  nsPluginNativeWindowWin * win = (nsPluginNativeWindowWin *)::GetProp(hWnd, NS_PLUGIN_WINDOW_PROPERTY_ASSOCIATION);
++  nsPluginNativeWindowWin * win = (nsPluginNativeWindowWin *)::GetPropW(hWnd, NS_PLUGIN_WINDOW_PROPERTY_ASSOCIATION);
+   NS_ASSERTION(!win || (win == this), "plugin window already has property and this is not us");
+   
+-  if (!::SetProp(hWnd, NS_PLUGIN_WINDOW_PROPERTY_ASSOCIATION, (HANDLE)this))
++  if (!::SetPropW(hWnd, NS_PLUGIN_WINDOW_PROPERTY_ASSOCIATION, (HANDLE)this))
+     return NS_ERROR_FAILURE;
+ 
+   return NS_OK;
+ }
+ 
+ nsresult nsPluginNativeWindowWin::UndoSubclassAndAssociateWindow()
+ {
+   // release plugin instance
+   SetPluginInstance(nsnull);
+ 
+   // remove window property
+   HWND hWnd = (HWND)window;
+   if (IsWindow(hWnd))
+-    ::RemoveProp(hWnd, NS_PLUGIN_WINDOW_PROPERTY_ASSOCIATION);
++    ::RemovePropW(hWnd, NS_PLUGIN_WINDOW_PROPERTY_ASSOCIATION);
+ 
+   // restore the original win proc
+   // but only do this if this were us last time
+   if (mPluginWinProc) {
+     WNDPROC currentWndProc = (WNDPROC)::GetWindowLong(hWnd, GWL_WNDPROC);
+     if (currentWndProc == PluginWndProc)
+       SubclassWindow(hWnd, (LONG)mPluginWinProc);
+   }

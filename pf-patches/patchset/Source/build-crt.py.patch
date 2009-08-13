@@ -1,0 +1,17 @@
+Index: memory/jemalloc/build-crt.py
+===================================================================
+RCS file: /cvsroot/mozilla/memory/jemalloc/build-crt.py,v
+retrieving revision 1.1
+diff -u -8 -p -r1.1 build-crt.py
+--- memory/jemalloc/build-crt.py	4 Feb 2008 15:17:11 -0000	1.1
++++ memory/jemalloc/build-crt.py	8 Aug 2008 12:13:56 -0000
+@@ -1,8 +1,8 @@
+ #!/usr/bin/env python
+ 
+ import os, sys
+ 
+ if 'MAKEFLAGS' in os.environ:
+   del os.environ['MAKEFLAGS']
+ os.chdir(sys.argv[1])
+-sys.exit(os.system('nmake dll_ mt RETAIL_DLL_NAME=mozcrt19 RETAIL_LIB_NAME=msvcrt'))
++sys.exit(os.system('nmake dll_ RETAIL_DLL_NAME=mozcrt19 RETAIL_LIB_NAME=msvcrt'))

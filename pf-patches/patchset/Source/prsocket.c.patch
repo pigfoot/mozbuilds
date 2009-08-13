@@ -1,0 +1,32 @@
+Index: nsprpub/pr/src/io/prsocket.c
+===================================================================
+RCS file: /cvsroot/mozilla/nsprpub/pr/src/io/prsocket.c,v
+retrieving revision 3.59
+diff -u -8 -p -r3.59 prsocket.c
+--- nsprpub/pr/src/io/prsocket.c	25 Jul 2007 06:45:08 -0000	3.59
++++ nsprpub/pr/src/io/prsocket.c	11 Dec 2007 13:41:40 -0000
+@@ -315,24 +315,16 @@ static PRStatus PR_CALLBACK SocketConnec
+     if (err != 0) {
+         _PR_MD_MAP_CONNECT_ERROR(err);
+         return PR_FAILURE;
+     }
+     return PR_SUCCESS;
+ 
+ #elif defined(WIN32) || defined(WIN16)
+ 
+-#if defined(WIN32)
+-    /*
+-     * The sleep circumvents a bug in Win32 WinSock.
+-     * See Microsoft Knowledge Base article ID: Q165989.
+-     */
+-    Sleep(0);
+-#endif /* WIN32 */
+-
+     if (out_flags & PR_POLL_EXCEPT) {
+         int len = sizeof(err);
+         if (getsockopt(osfd, (int)SOL_SOCKET, SO_ERROR, (char *) &err, &len)
+                 == SOCKET_ERROR) {
+             _PR_MD_MAP_GETSOCKOPT_ERROR(WSAGetLastError());
+             return PR_FAILURE;
+         }
+         if (err != 0) {

@@ -1,0 +1,428 @@
+Index: gfx/cairo/libpixman/src/pixman-utils.c
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/cairo/libpixman/src/pixman-utils.c,v
+retrieving revision 1.11
+diff -u -8 -p -r1.11 pixman-utils.c
+--- gfx/cairo/libpixman/src/pixman-utils.c	7 Apr 2008 05:07:39 -0000	1.11
++++ gfx/cairo/libpixman/src/pixman-utils.c	19 Sep 2008 13:32:02 -0000
+@@ -24,16 +24,22 @@
+ #ifdef HAVE_CONFIG_H
+ #include <config.h>
+ #endif
+ 
+ #include <stdlib.h>
+ 
+ #include "pixman-private.h"
+ #include "pixman-mmx.h"
++#include <xmmintrin.h>
++
++#ifdef TT_MEMUTIL
++pixman_bool_t nt_initialized = FALSE;
++uint32_t dwNonTemporalDataSizeMin = NON_TEMPORAL_STORES_NOT_SUPPORTED;
++#endif
+ 
+ pixman_bool_t
+ pixman_transform_point_3d (pixman_transform_t *transform,
+ 			   pixman_vector_t *vector)
+ {
+     pixman_vector_t		result;
+     int				i, j;
+     pixman_fixed_32_32_t	partial;
+@@ -95,23 +101,45 @@ pixman_fill8 (uint32_t  *bits,
+ {
+     int byte_stride = stride * (int) sizeof (uint32_t);
+     uint8_t *dst = (uint8_t *) bits;
+     uint8_t v = xor & 0xff;
+     int i;
+ 
+     dst = dst + y * byte_stride + x;
+ 
++#ifdef TT_MEMUTIL
++    if ((uint32_t)(width * height) <= dwNonTemporalDataSizeMin)
++    {
++        while (height--)
++        {
++            for (i = 0; i < width; ++i)
++                dst[i] = v;
++
++            dst += byte_stride;
++        }
++    }
++    else
++    {
++        while (height--)
++        {
++            memset_nontemporal_tt(dst, v, width);
++
++            dst += byte_stride;
++        }
++    }
++#else
+     while (height--)
+     {
+ 	for (i = 0; i < width; ++i)
+ 	    dst[i] = v;
+ 
+ 	dst += byte_stride;
+     }
++#endif
+ }
+ 
+ static void
+ pixman_fill16 (uint32_t *bits,
+ 	       int       stride,
+ 	       int       x,
+ 	       int       y,
+ 	       int       width,
+@@ -129,16 +157,114 @@ pixman_fill16 (uint32_t *bits,
+     {
+ 	for (i = 0; i < width; ++i)
+ 	    dst[i] = v;
+ 
+ 	dst += short_stride;
+     }
+ }
+ 
++#ifdef TT_MEMUTIL
++pixman_bool_t
++pixman_fill_mmxe (uint32_t *bits,
++		 int stride,
++		 int bpp,
++		 int x,
++		 int y,
++		 int width,
++		 int height,
++		 uint32_t xor)
++{
++    __m64	vfill;
++    uint32_t	byte_width;
++    uint8_t	*byte_line;
++
++    if (bpp == 16 && (xor >> 16 != (xor & 0xffff)))
++	return FALSE;
++
++    if (bpp != 16 && bpp != 32)
++	return FALSE;
++
++    if (bpp == 16)
++    {
++	stride = stride * (int) sizeof (uint32_t) / 2;
++	byte_line = (uint8_t *)(((uint16_t *)bits) + stride * y + x);
++	byte_width = 2 * width;
++	stride *= 2;
++    }
++    else
++    {
++	stride = stride * (int) sizeof (uint32_t) / 4;
++	byte_line = (uint8_t *)(((uint32_t *)bits) + stride * y + x);
++	byte_width = 4 * width;
++	stride *= 4;
++    }
++
++    if ((uint32_t)(byte_width * height) <= dwNonTemporalDataSizeMin)
++	return FALSE;
++
++    vfill = _mm_set_pi32(xor, xor);
++
++    while (height--)
++    {
++	int w;
++	uint8_t *d = byte_line;
++	byte_line += stride;
++	w = byte_width;
++
++	while (w >= 2 && ((unsigned long)d & 3))
++	{
++	    *(uint16_t *)d = xor;
++	    w -= 2;
++	    d += 2;
++	}
++
++	while (w >= 4 && ((unsigned long)d & 7))
++	{
++	    *(uint32_t *)d = xor;
++
++	    w -= 4;
++	    d += 4;
++	}
++
++	while (w >= 64)
++	{
++	    _mm_stream_pi((__m64*)(d +  0), vfill);
++	    _mm_stream_pi((__m64*)(d +  8), vfill);
++	    _mm_stream_pi((__m64*)(d + 16), vfill);
++	    _mm_stream_pi((__m64*)(d + 24), vfill);
++	    _mm_stream_pi((__m64*)(d + 32), vfill);
++	    _mm_stream_pi((__m64*)(d + 40), vfill);
++	    _mm_stream_pi((__m64*)(d + 48), vfill);
++	    _mm_stream_pi((__m64*)(d + 56), vfill);
++
++	    w -= 64;
++	    d += 64;
++	}
++
++	while (w >= 4)
++	{
++	    *(uint32_t *)d = xor;
++
++	    w -= 4;
++	    d += 4;
++	}
++	if (w >= 2)
++	{
++	    *(uint16_t *)d = xor;
++	    w -= 2;
++	    d += 2;
++	}
++    }
++
++    _mm_empty();
++    return TRUE;
++}
++#endif
++
+ static void
+ pixman_fill32 (uint32_t *bits,
+ 	       int       stride,
+ 	       int       x,
+ 	       int       y,
+ 	       int       width,
+ 	       int       height,
+ 	       uint32_t  xor)
+@@ -151,46 +277,70 @@ pixman_fill32 (uint32_t *bits,
+     {
+ 	for (i = 0; i < width; ++i)
+ 	    bits[i] = xor;
+ 
+ 	bits += stride;
+     }
+ }
+ 
++#ifdef _MSC_VER
++extern void pixman_fill32_omp (uint32_t *bits,
++       int stride,
++       int x,
++       int y,
++       int width,
++       int height,
++       uint32_t  xor);
++#endif
++
+ pixman_bool_t
+ pixman_fill (uint32_t *bits,
+ 	     int stride,
+ 	     int bpp,
+ 	     int x,
+ 	     int y,
+ 	     int width,
+ 	     int height,
+ 	     uint32_t xor)
+ {
+ #if 0
+     printf ("filling: %d %d %d %d (stride: %d, bpp: %d)   pixel: %x\n",
+ 	    x, y, width, height, stride, bpp, xor);
+ #endif
+ 
+-#ifdef USE_MMX
+-    if (!pixman_have_mmx() || !pixman_fill_mmx (bits, stride, bpp, x, y, width, height, xor))
++#ifdef TT_MEMUTIL
++    if (!nt_initialized)
++    {
++        dwNonTemporalDataSizeMin = GetNonTemporalDataSizeMin_tt();
++        nt_initialized = TRUE;
++    }
++
++    if (!pixman_fill_mmxe (bits, stride, bpp, x, y, width, height, xor))
+ #endif
+     {
+ 	switch (bpp)
+ 	{
+ 	case 8:
+ 	    pixman_fill8 (bits, stride, x, y, width, height, xor);
+ 	    break;
+ 
+ 	case 16:
+ 	    pixman_fill16 (bits, stride, x, y, width, height, xor);
+ 	    break;
+ 
+ 	case 32:
++#ifdef _MSC_VER
++      if (omp_cpu_counts >= 2 &&
++          width * height >= 250000)
++      {
++          pixman_fill32_omp (bits, stride, x, y, width, height, xor);
++          return TRUE;
++      }
++#endif
+ 	    pixman_fill32 (bits, stride, x, y, width, height, xor);
+ 	    break;
+ 
+ 	default:
+ 	    return FALSE;
+ 	    break;
+ 	}
+     }
+@@ -205,42 +355,66 @@ pixman_fill (uint32_t *bits,
+  */
+ 
+ pixman_fixed_t
+ pixman_sample_ceil_y (pixman_fixed_t y, int n)
+ {
+     pixman_fixed_t   f = pixman_fixed_frac(y);
+     pixman_fixed_t   i = pixman_fixed_floor(y);
+ 
+-    f = ((f + Y_FRAC_FIRST(n)) / STEP_Y_SMALL(n)) * STEP_Y_SMALL(n) + Y_FRAC_FIRST(n);
+-    if (f > Y_FRAC_LAST(n))
++    if (8 == n)
+     {
+-	f = Y_FRAC_FIRST(n);
+-	i += pixman_fixed_1;
++        f = ((f + Y_FRAC_FIRST(8)) / STEP_Y_SMALL(8)) * STEP_Y_SMALL(8) + Y_FRAC_FIRST(8);
++        if (f > Y_FRAC_LAST(8))
++        {
++            f = Y_FRAC_FIRST(8);
++            i += pixman_fixed_1;
++        }
++    }
++    else
++    {
++        f = ((f + Y_FRAC_FIRST(n)) / STEP_Y_SMALL(n)) * STEP_Y_SMALL(n) + Y_FRAC_FIRST(n);
++        if (f > Y_FRAC_LAST(n))
++        {
++            f = Y_FRAC_FIRST(n);
++            i += pixman_fixed_1;
++        }
+     }
+     return (i | f);
+ }
+ 
+ #define _div(a,b)    ((a) >= 0 ? (a) / (b) : -((-(a) + (b) - 1) / (b)))
+ 
+ /*
+  * Compute the largest value no greater than y which is on a
+  * grid row
+  */
+ pixman_fixed_t
+ pixman_sample_floor_y (pixman_fixed_t y, int n)
+ {
+     pixman_fixed_t   f = pixman_fixed_frac(y);
+     pixman_fixed_t   i = pixman_fixed_floor (y);
+ 
+-    f = _div(f - Y_FRAC_FIRST(n), STEP_Y_SMALL(n)) * STEP_Y_SMALL(n) + Y_FRAC_FIRST(n);
+-    if (f < Y_FRAC_FIRST(n))
++    if (8 == n)
+     {
+-	f = Y_FRAC_LAST(n);
+-	i -= pixman_fixed_1;
++        f = _div(f - Y_FRAC_FIRST(8), STEP_Y_SMALL(8)) * STEP_Y_SMALL(8) + Y_FRAC_FIRST(8);
++        if (f < Y_FRAC_FIRST(8))
++        {
++            f = Y_FRAC_LAST(8);
++            i -= pixman_fixed_1;
++        }
++    }
++    else
++    {
++        f = _div(f - Y_FRAC_FIRST(n), STEP_Y_SMALL(n)) * STEP_Y_SMALL(n) + Y_FRAC_FIRST(n);
++        if (f < Y_FRAC_FIRST(n))
++        {
++            f = Y_FRAC_LAST(n);
++            i -= pixman_fixed_1;
++        }
+     }
+     return (i | f);
+ }
+ 
+ /*
+  * Step an edge by any amount (including negative values)
+  */
+ void
+@@ -251,17 +425,28 @@ pixman_edge_step (pixman_edge_t *e, int 
+     e->x += n * e->stepx;
+ 
+     ne = e->e + n * (pixman_fixed_48_16_t) e->dx;
+ 
+     if (n >= 0)
+     {
+ 	if (ne > 0)
+ 	{
+-	    int nx = (ne + e->dy - 1) / e->dy;
++	    pixman_fixed_48_16_t neTemp = (ne + e->dy - 1);
++	    int nx;
++
++	    if (neTemp >= (pixman_fixed_48_16_t)INT_MIN &&
++	        neTemp <= (pixman_fixed_48_16_t)INT_MAX)
++	    {
++	        nx = (int)neTemp / e->dy;
++	    }
++	    else
++	    {
++	        nx = neTemp / e->dy;
++	    }
+ 	    e->e = ne - nx * (pixman_fixed_48_16_t) e->dy;
+ 	    e->x += nx * e->signdx;
+ 	}
+     }
+     else
+     {
+ 	if (ne <= -e->dy)
+ 	{
+@@ -281,19 +466,28 @@ _pixman_edge_tMultiInit (pixman_edge_t *
+ {
+     pixman_fixed_t	stepx;
+     pixman_fixed_48_16_t	ne;
+ 
+     ne = n * (pixman_fixed_48_16_t) e->dx;
+     stepx = n * e->stepx;
+     if (ne > 0)
+     {
+-	int nx = ne / e->dy;
+-	ne -= nx * e->dy;
+-	stepx += nx * e->signdx;
++        int nx;
++
++        if (ne <= (pixman_fixed_48_16_t)INT_MAX)
++        {
++            nx = (int)ne / e->dy;
++        }
++        else
++        {
++            nx = ne / e->dy;
++        }
++        ne -= nx * e->dy;
++        stepx += nx * e->signdx;
+     }
+     *dx_p = ne;
+     *stepx_p = stepx;
+ }
+ 
+ /*
+  * Initialize one edge structure given the line endpoints and a
+  * starting y value
+@@ -327,18 +521,26 @@ pixman_edge_init (pixman_edge_t	*e,
+ 	else
+ 	{
+ 	    e->signdx = -1;
+ 	    e->stepx = -(-dx / dy);
+ 	    e->dx = -dx % dy;
+ 	    e->e = 0;
+ 	}
+ 
++if (8 == n)
++{
++	_pixman_edge_tMultiInit (e, STEP_Y_SMALL(8), &e->stepx_small, &e->dx_small);
++	_pixman_edge_tMultiInit (e, STEP_Y_BIG(8), &e->stepx_big, &e->dx_big);
++}
++else
++{
+ 	_pixman_edge_tMultiInit (e, STEP_Y_SMALL(n), &e->stepx_small, &e->dx_small);
+ 	_pixman_edge_tMultiInit (e, STEP_Y_BIG(n), &e->stepx_big, &e->dx_big);
++}
+     }
+     pixman_edge_step (e, y_start - y_top);
+ }
+ 
+ /*
+  * Initialize one edge structure given a line, starting y value
+  * and a pixel offset for the line
+  */

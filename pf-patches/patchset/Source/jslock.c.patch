@@ -1,0 +1,33 @@
+Index: js/src/jslock.c
+===================================================================
+RCS file: /cvsroot/mozilla/js/src/jslock.c,v
+retrieving revision 3.83
+diff -u -8 -p -r3.83 jslock.c
+--- js/src/jslock.c	9 Mar 2008 04:49:46 -0000	3.83
++++ js/src/jslock.c	30 Mar 2008 22:04:45 -0000
+@@ -97,21 +97,25 @@ static JS_INLINE int
+ js_CompareAndSwapHelper(jsword *w, jsword ov, jsword nv)
+ {
+     _InterlockedCompareExchange(w, nv, ov);
+     __asm {
+         sete al
+     }
+ }
+ 
++#ifdef TT_MEMUTIL
++#define js_CompareAndSwap(w, ov, nv) js_CompareAndSwap_tt(nv, w, ov)
++#else /* TT_MEMUTIL */
+ static JS_INLINE int
+ js_CompareAndSwap(jsword *w, jsword ov, jsword nv)
+ {
+     return (js_CompareAndSwapHelper(w, ov, nv) & 1);
+ }
++#endif /* TT_MEMUTIL */
+ 
+ #elif defined(XP_MACOSX) || defined(DARWIN)
+ 
+ #include <libkern/OSAtomic.h>
+ 
+ static JS_INLINE int
+ js_CompareAndSwap(jsword *w, jsword ov, jsword nv)
+ {

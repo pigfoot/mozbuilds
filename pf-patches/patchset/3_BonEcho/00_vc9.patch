@@ -1,0 +1,329 @@
+--- mozilla/configure.BAK	2008-02-24 23:29:18.236359700 +0800
++++ mozilla/configure	2008-02-24 23:55:55.757385500 +0800
+@@ -18,7 +18,13 @@
+ # Any additions from configure.in:
+ ac_help="$ac_help
+   --disable-compile-environment
+-                           Disable compiler/library checks."
++                          Disable compiler/library checks."
++ac_help="$ac_help
++  --with-windows-version=WINVER
++                          Minimum Windows version (WINVER) to support
++                              400: Windows 95
++                              500: Windows 2000
++                              501: Windows XP"
+ ac_help="$ac_help
+   --enable-macos-target=VER (default=10.2/ppc, 10.4/x86)
+                           Set the minimum MacOS version needed at runtime"
+@@ -1068,6 +1074,8 @@
+ GCONF_VERSION=1.2.1
+ LIBGNOME_VERSION=2.0
+ 
++MSMANIFEST_TOOL=
++
+ MISSING_X=
+ for ac_prog in gawk mawk nawk awk
+ do
+@@ -2902,6 +2910,36 @@
+ fi
+ 
+ case "$target" in
++*-wince)
++    WINVER=400
++    ;;
++*)
++    if test -n "$GNU_CC"; then  
++        WINVER=501
++    else    
++        WINVER=500
++    fi
++    ;;
++esac
++
++# Check whether --with-windows-version or --without-windows-version was given.
++if test "${with_windows_version+set}" = set; then
++  withval="$with_windows_version"
++  WINVER=$withval
++fi
++
++
++case "$WINVER" in
++400|500|501)
++    ;;
++
++*)
++    { echo "configure: error: Invalid value --with-windows-version, must be 400, 500 or 501" 1>&2; exit 1; };
++    ;;
++
++esac
++
++case "$target" in
+ *-cygwin*|*-mingw*|*-msvc*|*-mks*|*-wince)
+     if test "$GCC" != "yes"; then
+         # Check to see if we are really running in a msvc environemnt
+@@ -3022,10 +3060,59 @@
+             _CC_SUITE=7
+         elif test "$_CC_MAJOR_VERSION" = "14"; then
+             _CC_SUITE=8
++            CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
++            cat >> confdefs.h <<\EOF
++#define _CRT_SECURE_NO_DEPRECATE 1
++EOF
++
++            cat >> confdefs.h <<\EOF
++#define _CRT_NONSTDC_NO_DEPRECATE 1
++EOF
++
++        elif test "$_CC_MAJOR_VERSION" = "15"; then
++            _CC_SUITE=9
++            CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
++            cat >> confdefs.h <<\EOF
++#define _CRT_SECURE_NO_WARNINGS 1
++EOF
++
++            cat >> confdefs.h <<\EOF
++#define _CRT_NONSTDC_NO_WARNINGS 1
++EOF
++
+         else
+             { echo "configure: error: This version of the MSVC compiler, $CC_VERSION , is unsupported." 1>&2; exit 1; }
+         fi
+ 
++        _MOZ_RTTI_FLAGS_ON='-GR'
++        _MOZ_RTTI_FLAGS_OFF='-GR-'
++        _MOZ_EXCEPTIONS_FLAGS_ON='-EHsc'
++        _MOZ_EXCEPTIONS_FLAGS_OFF=''
++
++        if test -n "$WIN32_REDIST_DIR"; then
++            WIN32_REDIST_DIR=`cd "$WIN32_REDIST_DIR" && pwd`
++        fi
++	
++        # bug #249782
++        # ensure that mt.exe is Microsoft (R) Manifest Tool and not magnetic tape manipulation utility (or something else)
++        if test "$_CC_SUITE" -ge "8"; then
++                
++                _MSMT_VER_FILTER='s|.* \([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*|\1|p'
++                
++
++                MSMT_TOOL=`mt 2>&1|grep 'Microsoft (R) Manifest Tool'`
++                if test -n "$MSMT_TOOL"; then
++                        MSMANIFEST_TOOL_VERSION=`echo ${MSMT_TOOL}|sed -ne "$_MSMT_VER_FILTER"`
++                        if test -z "$MSMANIFEST_TOOL_VERSION"; then
++                                echo "configure: warning: Unknown version of the Microsoft (R) Manifest Tool." 1>&2
++                        fi
++                        MSMANIFEST_TOOL=1
++                        unset MSMT_TOOL
++                else
++                        { echo "configure: error: Microsoft (R) Manifest Tool must be in your \$PATH." 1>&2; exit 1; }
++                fi
++        fi
++
+         # Check linker version
+         _LD_FULL_VERSION=`"${LD}" -v 2>&1 | sed -ne "$_MSVC_VER_FILTER"`
+         _LD_MAJOR_VERSION=`echo ${_LD_FULL_VERSION} | $AWK -F\. '{ print $1 }'`
+@@ -3112,6 +3199,20 @@
+             { echo "configure: error: windres version $WINDRES_VERSION or higher is required to build." 1>&2; exit 1; }
+         fi
+     fi # !GNU_CC
++
++    cat >> confdefs.h <<EOF
++#define WINVER 0x$WINVER
++EOF
++
++    cat >> confdefs.h <<EOF
++#define _WIN32_WINNT 0x$WINVER
++EOF
++
++    # Require OS features provided by IE 5.0
++    cat >> confdefs.h <<EOF
++#define _WIN32_IE 0x0500
++EOF
++
+     ;;
+ esac
+ 
+@@ -6292,10 +6393,6 @@
+ #define HW_THREADS 1
+ EOF
+ 
+-    cat >> confdefs.h <<EOF
+-#define WINVER 0x400
+-EOF
+-
+     cat >> confdefs.h <<\EOF
+ #define STDC_HEADERS 1
+ EOF
+@@ -6417,14 +6514,6 @@
+ #define HW_THREADS 1
+ EOF
+ 
+-    cat >> confdefs.h <<EOF
+-#define WINVER 0x400
+-EOF
+-
+-    cat >> confdefs.h <<EOF
+-#define _WIN32_WINNT 0x400
+-EOF
+-
+     cat >> confdefs.h <<\EOF
+ #define STDC_HEADERS 1
+ EOF
+--- mozilla/config/rules.mk.BAK	2008-02-12 23:13:39.000000000 +0800
++++ mozilla/config/rules.mk	2008-02-25 00:03:30.082602800 +0800
+@@ -811,6 +811,12 @@
+ 
+ ifeq (_WINNT,$(GNU_CC)_$(OS_ARCH))
+ 	$(LD) -NOLOGO -OUT:$@ -PDB:$(PDBFILE) $(WIN32_EXE_LDFLAGS) $(LDFLAGS) $(PROGOBJS) $(RESFILE) $(LIBS) $(EXTRA_LIBS) $(OS_LIBS)
++ifdef MSMANIFEST_TOOL
++	@if test -f $@.manifest; then \
++		mt.exe -nologo -manifest $@.manifest -outputresource:$@\;1; \
++		rm -f $@.manifest; \
++	fi
++endif	# MSVC with manifest tool
+ else
+ ifeq ($(CPP_PROG_LINK),1)
+ 	$(CCC) -o $@ $(CXXFLAGS) $(WRAP_MALLOC_CFLAGS) $(PROGOBJS) $(RESFILE) $(WIN32_EXE_LDFLAGS) $(LDFLAGS) $(LIBS_DIR) $(LIBS) $(OS_LIBS) $(EXTRA_LIBS) $(BIN_FLAGS) $(WRAP_MALLOC_LIB) $(PROFILER_LIBS) $(EXE_DEF_FILE)
+@@ -843,6 +849,12 @@
+ else
+ ifeq (_WINNT,$(GNU_CC)_$(HOST_OS_ARCH))
+ 	$(HOST_LD) -NOLOGO -OUT:$@ -PDB:$(PDBFILE) $(HOST_OBJS) $(WIN32_EXE_LDFLAGS) $(HOST_LIBS) $(HOST_EXTRA_LIBS)
++ifdef MSMANIFEST_TOOL
++	@if test -f $@.manifest; then \
++		mt.exe -NOLOGO -MANIFEST $@.manifest -OUTPUTRESOURCE:$@\;1; \
++		rm -f $@.manifest; \
++	fi
++endif	# MSVC with manifest tool
+ else
+ 	$(HOST_CC) -o $@ $(HOST_CFLAGS) $(HOST_LDFLAGS) $(HOST_PROGOBJS) $(HOST_LIBS) $(HOST_EXTRA_LIBS)
+ endif
+@@ -866,6 +878,12 @@
+ else
+ ifeq (_WINNT,$(GNU_CC)_$(OS_ARCH))
+ 	$(LD) -nologo -out:$@ -pdb:$(PDBFILE) $< $(WIN32_EXE_LDFLAGS) $(LDFLAGS) $(LIBS) $(EXTRA_LIBS) $(OS_LIBS)
++ifdef MSMANIFEST_TOOL
++	@if test -f $@.manifest; then \
++		mt.exe -nologo -manifest $@.manifest -outputresource:$@\;1; \
++		rm -f $@.manifest; \
++	fi
++endif	# MSVC with manifest tool
+ else
+ ifeq ($(CPP_PROG_LINK),1)
+ 	$(CCC) $(WRAP_MALLOC_CFLAGS) $(CXXFLAGS) -o $@ $< $(WIN32_EXE_LDFLAGS) $(LDFLAGS) $(LIBS_DIR) $(LIBS) $(OS_LIBS) $(EXTRA_LIBS) $(WRAP_MALLOC_LIB) $(PROFILER_LIBS) $(BIN_FLAGS)
+@@ -1019,7 +1037,15 @@
+ endif # SHARED_LIBRARY_LIBS
+ endif # NO_LD_ARCHIVE_FLAGS
+ 	$(MKSHLIB) $(SHLIB_LDSTARTFILE) $(OBJS) $(LOBJS) $(SUB_SHLOBJS) $(RESFILE) $(LDFLAGS) $(EXTRA_DSO_LDOPTS) $(OS_LIBS) $(EXTRA_LIBS) $(DEF_FILE) $(SHLIB_LDENDFILE)
++ifeq (_WINNT,$(GNU_CC)_$(OS_ARCH))
++ifdef MSMANIFEST_TOOL
++	@if test -f $@.manifest; then \
++		mt.exe -nologo -manifest $@.manifest -outputresource:$@\;1; \
++		rm -f $@.manifest; \
++	fi
+ 	@rm -f foodummyfilefoo $(SUB_SHLOBJS) $(DELETE_AFTER_LINK)
++endif	# MSVC with manifest tool
++endif	# WINNT && !GCC
+ else # os2 vacpp
+ 	$(MKSHLIB) -O:$@ -DLL -INC:_dllentry $(LDFLAGS) $(OBJS) $(LOBJS) $(EXTRA_DSO_LDOPTS) $(OS_LIBS) $(EXTRA_LIBS) $(DEF_FILE)
+ endif # !os2 vacpp
+--- mozilla/config/autoconf.mk.in.BAK	2006-09-15 02:07:03.000000000 +0800
++++ mozilla/config/autoconf.mk.in	2008-02-25 00:12:04.376186300 +0800
+@@ -543,6 +543,7 @@
+ MOZ_TOOLS_DIR	= @MOZ_TOOLS_DIR@
+ MOZ_DEBUG_SYMBOLS = @MOZ_DEBUG_SYMBOLS@
+ MOZ_QUANTIFY	= @MOZ_QUANTIFY@
++MSMANIFEST_TOOL = @MSMANIFEST_TOOL@
+ 
+ #python options
+ PYTHON = @MOZ_PYTHON@
+--- mozilla/xpcom/base/nsStackFrameWin.cpp.BAK	2005-08-03 06:17:59.000000000 +0800
++++ mozilla/xpcom/base/nsStackFrameWin.cpp	2008-02-25 00:42:59.570909200 +0800
+@@ -327,7 +327,7 @@
+          * Not loaded, here's the magic.
+          * Go through all the modules.
+          */
+-        enumRes = _EnumerateLoadedModules(aProcess, callbackEspecial, (PVOID)&aAddr);
++        enumRes = _EnumerateLoadedModules(aProcess, (PENUMLOADED_MODULES_CALLBACK)callbackEspecial, (PVOID)&aAddr);
+         if (FALSE != enumRes)
+         {
+             /*
+@@ -377,7 +377,7 @@
+          * Not loaded, here's the magic.
+          * Go through all the modules.
+          */
+-        enumRes = _EnumerateLoadedModules64(aProcess, callbackEspecial64, (PVOID)&aAddr);
++        enumRes = _EnumerateLoadedModules64(aProcess, (PENUMLOADED_MODULES_CALLBACK64)callbackEspecial64, (PVOID)&aAddr);
+         if (FALSE != enumRes)
+         {
+             /*
+--- mozilla/netwerk/system/win32/nsNotifyAddrListener.cpp.BAK	2006-05-08 13:21:32.000000000 +0800
++++ mozilla/netwerk/system/win32/nsNotifyAddrListener.cpp	2008-02-25 01:12:07.204789200 +0800
+@@ -67,6 +67,8 @@
+ 
+ #define IF_TYPE_SOFTWARE_LOOPBACK       24
+ 
++#ifndef _NLDEF_ 
++
+ typedef enum {
+     IpPrefixOriginOther = 0,
+     IpPrefixOriginManual,
+@@ -92,6 +94,12 @@
+     IpDadStatePreferred
+ } IP_DAD_STATE;
+ 
++#else
++typedef NL_PREFIX_ORIGIN IP_PREFIX_ORIGIN;
++typedef NL_SUFFIX_ORIGIN IP_SUFFIX_ORIGIN;
++typedef NL_DAD_STATE IP_DAD_STATE;
++#endif
++
+ typedef struct _IP_ADAPTER_UNICAST_ADDRESS {
+     union {
+         ULONGLONG Alignment;
+@@ -148,6 +156,7 @@
+     SOCKET_ADDRESS Address;
+ } IP_ADAPTER_DNS_SERVER_ADDRESS, *PIP_ADAPTER_DNS_SERVER_ADDRESS;
+ 
++#ifndef _IFDEF_ 
+ typedef enum {
+     IfOperStatusUp = 1,
+     IfOperStatusDown,
+@@ -157,6 +166,7 @@
+     IfOperStatusNotPresent,
+     IfOperStatusLowerLayerDown
+ } IF_OPER_STATUS;
++#endif 
+ 
+ typedef struct _IP_ADAPTER_ADDRESSES {
+     union {
+--- mozilla/widget/src/windows/nsWindow.cpp.BAK	2007-11-27 13:24:03.000000000 +0800
++++ mozilla/widget/src/windows/nsWindow.cpp	2008-02-25 01:30:29.440680400 +0800
+@@ -113,7 +113,7 @@
+ 
+ #ifdef ACCESSIBILITY
+ #include "OLEIDL.H"
+-#include "winable.h"
++#include "windows.h"
+ #include "nsIAccessible.h"
+ #include "nsIAccessibleDocument.h"
+ #include "nsIAccessNode.h"
+--- mozilla/accessible/public/msaa/Makefile.in.BAK	2005-06-02 12:00:21.000000000 +0800
++++ mozilla/accessible/public/msaa/Makefile.in	2008-02-25 10:03:44.046114700 +0800
+@@ -86,7 +86,6 @@
+ 
+ OS_LIBS = \
+ 	kernel32.lib \
+-	rpcndr.lib \
+ 	rpcns4.lib \
+ 	rpcrt4.lib \
+ 	oleaut32.lib \
+--- mozilla/accessible/src/msaa/nsAccessNodeWrap.h.BAK	2005-07-15 21:08:26.000000000 +0800
++++ mozilla/accessible/src/msaa/nsAccessNodeWrap.h	2008-02-25 10:24:45.014864700 +0800
+@@ -51,7 +51,7 @@
+ #include "nsAccessNode.h"
+ #include "OLEIDL.H"
+ #include "OLEACC.H"
+-#include "winable.h"
++#include "windows.h"
+ #undef ERROR /// Otherwise we can't include nsIDOMNSEvent.h if we include this
+ 
+ typedef LRESULT (STDAPICALLTYPE *LPFNNOTIFYWINEVENT)(DWORD event,HWND hwnd,LONG idObjectType,LONG idObject);

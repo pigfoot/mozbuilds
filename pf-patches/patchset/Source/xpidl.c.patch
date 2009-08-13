@@ -1,0 +1,55 @@
+Index: xpcom/typelib/xpidl/xpidl.c
+===================================================================
+RCS file: /cvsroot/mozilla/xpcom/typelib/xpidl/xpidl.c,v
+retrieving revision 1.39
+diff -u -8 -p -r1.39 xpidl.c
+--- xpcom/typelib/xpidl/xpidl.c	16 Nov 2006 09:10:09 -0000	1.39
++++ xpcom/typelib/xpidl/xpidl.c	9 Aug 2008 13:48:28 -0000
+@@ -36,16 +36,20 @@
+  * ***** END LICENSE BLOCK ***** */
+ 
+ /*
+  * Main xpidl program entry point.
+  */
+ 
+ #include "xpidl.h"
+ 
++#ifdef TT_MEMUTIL
++#include <windows.h>
++#endif
++
+ static ModeData modes[] = {
+     {"header",  "Generate C++ header",         "h",    xpidl_header_dispatch},
+     {"typelib", "Generate XPConnect typelib",  "xpt",  xpidl_typelib_dispatch},
+     {"doc",     "Generate HTML documentation", "html", xpidl_doc_dispatch},
+     {"java",    "Generate Java interface",     "java", xpidl_java_dispatch},
+     {0,         0,                             0,      0}
+ };
+ 
+@@ -269,17 +273,26 @@ int main(int argc, char *argv[])
+         return 1;
+     }
+ 
+     /*
+      * Don't try to process multiple files, given that we don't handle -o
+      * multiply.
+      */
+     if (i < argc) {
++#ifdef TT_MEMUTIL
++        if (mode && xpidl_header_dispatch == mode->factory &&
++            GetEnvironmentVariableA("TT_XPIDL_DONT_DISPATCH_HEADER", NULL, 0) >= 1) {
++            i = TRUE;
++        } else {
++            i = xpidl_process_idl(argv[i], inc_head, file_basename, mode);
++        }
++#else
+         i = xpidl_process_idl(argv[i], inc_head, file_basename, mode);
++#endif
+     } else {
+         if (argc > i + 1) {
+             fprintf(stderr, "ERROR: extra arguments after input file\n");
+         } else {
+             fprintf(stderr, "ERROR: no file to process\n");
+         }
+         return 1;
+     }

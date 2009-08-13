@@ -1,0 +1,45 @@
+Index: js/src/jsstr.c
+===================================================================
+RCS file: /cvsroot/mozilla/js/src/jsstr.c,v
+retrieving revision 3.205
+diff -u -8 -p -r3.205 jsstr.c
+--- js/src/jsstr.c	17 Mar 2008 08:58:29 -0000	3.205
++++ js/src/jsstr.c	30 Mar 2008 22:08:35 -0000
+@@ -1018,27 +1018,28 @@ str_indexOf(JSContext *cx, uintN argc, j
+     /* XXX tune the BMH threshold (512) */
+     if (textlen - i >= 512 && (jsuint)(patlen - 2) <= BMH_PATLEN_MAX - 2) {
+         index = js_BoyerMooreHorspool(text, textlen, pat, patlen, i);
+         if (index != BMH_BAD_PATTERN)
+             goto out;
+     }
+ 
+     index = -1;
+-    j = 0;
+-    while (i + j < textlen) {
+-        if (text[i + j] == pat[j]) {
+-            if (++j == patlen) {
+-                index = i;
+-                break;
++    for (; i <= textlen - patlen; i++) {
++        if (text[i] == pat[0]) {
++            for (j = 1; j < patlen; j++) {
++                if (text[i + j] != pat[j]) {
++                    goto next_i;
++                }
+             }
+-        } else {
+-            i++;
+-            j = 0;
++            index = i;
++            break;
+         }
++next_i:
++        ;
+     }
+ 
+ out:
+     *vp = INT_TO_JSVAL(index);
+     return JS_TRUE;
+ }
+ 
+ static JSBool

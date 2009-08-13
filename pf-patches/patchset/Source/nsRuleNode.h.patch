@@ -1,0 +1,43 @@
+Index: layout/style/nsRuleNode.h
+===================================================================
+RCS file: /cvsroot/mozilla/layout/style/nsRuleNode.h,v
+retrieving revision 1.61
+diff -u -8 -p -r1.61 nsRuleNode.h
+--- layout/style/nsRuleNode.h	10 Jan 2008 20:56:49 -0000	1.61
++++ layout/style/nsRuleNode.h	13 Feb 2008 08:41:49 -0000
+@@ -175,29 +175,34 @@ struct nsResetStyleData
+ struct nsCachedStyleData
+ {
+   struct StyleStructInfo {
+     ptrdiff_t mCachedStyleDataOffset;
+     ptrdiff_t mInheritResetOffset;
+     PRBool    mIsReset;
+   };
+ 
+-  static StyleStructInfo gInfo[];
++  static const StyleStructInfo gInfo[];
+ 
+   nsInheritedStyleData* mInheritedData;
+   nsResetStyleData* mResetData;
+ 
+   static PRBool IsReset(const nsStyleStructID& aSID) {
+     return gInfo[aSID].mIsReset;
+   }
+ 
+   static PRUint32 GetBitForSID(const nsStyleStructID& aSID) {
+     return 1 << aSID;
+   }
+ 
++#ifdef _MSC_VER
++  __forceinline
++#else
++  inline
++#endif
+   NS_HIDDEN_(void*) NS_FASTCALL GetStyleData(const nsStyleStructID& aSID) {
+     // Each struct is stored at this.m##type##Data->m##name##Data where
+     // |type| is either Inherit or Reset, and |name| is the name of the
+     // style struct.  The |gInfo| stores the offset of the appropriate
+     // m##type##Data for the struct within nsCachedStyleData (|this|)
+     // and the offset of the appropriate m##name##Data within the
+     // m##type##Data.  Note that if we don't have any reset structs,
+     // then mResetData is null, and likewise for mInheritedData.  This

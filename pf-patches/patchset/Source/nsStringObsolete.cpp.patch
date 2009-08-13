@@ -1,0 +1,82 @@
+Index: xpcom/string/src/nsStringObsolete.cpp
+===================================================================
+RCS file: /cvsroot/mozilla/xpcom/string/src/nsStringObsolete.cpp,v
+retrieving revision 1.18
+diff -u -8 -p -r1.18 nsStringObsolete.cpp
+--- xpcom/string/src/nsStringObsolete.cpp	15 Mar 2006 14:23:11 -0000	1.18
++++ xpcom/string/src/nsStringObsolete.cpp	14 May 2008 08:27:34 -0000
+@@ -795,32 +795,48 @@ RFindCharInSet( const CharT* data, PRUin
+               return iter - data; // found it!  return index of the found char.
+ 
+             setChar = *(++charInSet);
+           }
+       }
+     return kNotFound;
+   }
+ 
++#ifdef TT_MEMUTIL
++#include "fixalloc_tt.h"
++#define CNVTF_FIXED_BUFSIZE  40
++#endif
++
+ /**
+  * This is a copy of |PR_cnvtf| with a bug fixed.  (The second argument
+  * of PR_dtoa is 2 rather than 1.)
+  *
+  * XXX(darin): if this is the right thing, then why wasn't it fixed in NSPR?!?
+  */
+ void 
+ Modified_cnvtf(char *buf, int bufsz, int prcsn, double fval)
+ {
+   PRIntn decpt, sign, numdigits;
+   char *num, *nump;
+   char *bufp = buf;
+   char *endnum;
++#ifdef TT_MEMUTIL
++  static CFixedAlloc_tt fixedbuf(CNVTF_FIXED_BUFSIZE, 2);
++#endif
+ 
+   /* If anything fails, we store an empty string in 'buf' */
++#ifdef TT_MEMUTIL
++  if (bufsz <= CNVTF_FIXED_BUFSIZE) {
++    num = (char*)fixedbuf.Alloc();
++  } else {
++    num = (char*)malloc(bufsz);
++  }
++#else
+   num = (char*)malloc(bufsz);
++#endif
+   if (num == NULL) {
+     buf[0] = '\0';
+     return;
+   }
+   if (PR_dtoa(fval, 2, prcsn, &decpt, &sign, &endnum, num, bufsz)
+       == PR_FAILURE) {
+     buf[0] = '\0';
+     goto done;
+@@ -885,17 +901,25 @@ Modified_cnvtf(char *buf, int bufsz, int
+     }
+ 
+     while (*nump != '\0') {
+       *bufp++ = *nump++;
+     }
+     *bufp++ = '\0';
+   }
+ done:
++#ifdef TT_MEMUTIL
++  if (bufsz <= CNVTF_FIXED_BUFSIZE) {
++    fixedbuf.Free(num);
++  } else {
++    free(num);
++  }
++#else
+   free(num);
++#endif
+ }
+ 
+   /**
+    * this method changes the meaning of |offset| and |count|:
+    * 
+    * upon return,
+    *   |offset| specifies start of search range
+    *   |count| specifies length of search range

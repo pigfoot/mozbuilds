@@ -1,0 +1,20 @@
+Index: db/sqlite3/src/Makefile.in
+===================================================================
+RCS file: /cvsroot/mozilla/db/sqlite3/src/Makefile.in,v
+retrieving revision 1.36
+diff -u -8 -p -r1.36 Makefile.in
+--- db/sqlite3/src/Makefile.in	1 Jul 2008 06:21:10 -0000	1.36
++++ db/sqlite3/src/Makefile.in	16 Jul 2008 12:54:25 -0000
+@@ -113,8 +113,12 @@ include $(topsrcdir)/config/rules.mk
+ 
+ # next line allows use of MOZ_OBJDIR in .mozconfig with older gcc on BeOS, maybe others
+ LOCAL_INCLUDES += -I$(srcdir)
+ 
+ ifeq ($(OS_ARCH),OS2)
+ ADD_TO_DEF_FILE = sed -e '1,/^EXPORTS$$/ d' -e 's,sqlite3,_\0,' -e 's,\ DATA.*$$,,' \
+ 		$(srcdir)/sqlite.def >> $(DEF_FILE)
+ endif
++
++ifeq ($(OS_ARCH),WINNT)
++LDFLAGS := $(filter-out -LTCG:PGI -LTCG:PGINSTRUMENT -LTCG:PGU -LTCG:PGUPDATE -LTCG:PGO -LTCG:PGOPTIMIZE,$(LDFLAGS))
++endif

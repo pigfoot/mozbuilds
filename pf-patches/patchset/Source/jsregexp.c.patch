@@ -1,0 +1,177 @@
+Index: js/src/jsregexp.c
+===================================================================
+RCS file: /cvsroot/mozilla/js/src/jsregexp.c,v
+retrieving revision 3.200
+diff -u -8 -p -r3.200 jsregexp.c
+--- js/src/jsregexp.c	11 Aug 2008 18:24:13 -0000	3.200
++++ js/src/jsregexp.c	24 Oct 2008 14:08:31 -0000
+@@ -36,16 +36,19 @@
+  * the provisions above, a recipient may use your version of this file under
+  * the terms of any one of the MPL, the GPL or the LGPL.
+  *
+  * ***** END LICENSE BLOCK ***** */
+ 
+ /*
+  * JS regular expressions, after Perl.
+  */
++#if _MSC_VER >= 1400
++#include <intrin.h>
++#endif
+ #include "jsstddef.h"
+ #include <stdlib.h>
+ #include <string.h>
+ #include <stdarg.h>
+ #include "jstypes.h"
+ #include "jsarena.h" /* Added by JSIFY */
+ #include "jsutil.h" /* Added by JSIFY */
+ #include "jsapi.h"
+@@ -2263,16 +2266,74 @@ AddCharacterRangeToCharSet(RECharSet *cs
+     } else {
+         cs->u.bits[byteIndex1] |= 0xFF << c1;
+         for (i = byteIndex1 + 1; i < byteIndex2; i++)
+             cs->u.bits[i] = 0xFF;
+         cs->u.bits[byteIndex2] |= (uint8)0xFF >> (7 - c2);
+     }
+ }
+ 
++typedef struct {
++    jschar start;
++    jschar end;
++} CharacterRange;
++
++/*
++ * The following characters are taken from the ECMA-262 standard, section 7.2
++ * and 7.3, and the Unicode 3 standard, Table 6-1.
++ */
++static const CharacterRange WhiteSpaceRanges[] = {
++  /* TAB, LF, VT, FF, CR */
++  { 0x0009, 0x000D },
++  /* SPACE */
++  { 0x0020, 0x0020 },
++  /* NO-BREAK SPACE */
++  { 0x00A0, 0x00A0 },
++  /* EN QUAD, EM QUAD, EN SPACE, EM SPACE, THREE-PER-EM SPACE, FOUR-PER-EM
++     SPACE, SIX-PER-EM SPACE, FIGURE SPACE, PUNCTUATION SPACE, THIN SPACE,
++     HAIR SPACE, ZERO WIDTH SPACE */
++  { 0x2000, 0x200B },
++  /* LS, PS */
++  { 0x2028, 0x2029 },
++  /* NARROW NO-BREAK SPACE */
++  { 0x202F, 0x202F },
++  /* IDEOGRAPHIC SPACE */
++  { 0x3000, 0x3000 }
++};
++
++/* ECMA-262 standard, section 15.10.2.6. */
++static const CharacterRange WordRanges[] = {
++  { (jschar)'0', (jschar)'9' },
++  { (jschar)'A', (jschar)'Z' },
++  { (jschar)'_', (jschar)'_' },
++  { (jschar)'a', (jschar)'z' }
++};
++
++static void
++AddCharacterRangesToCharSet(RECharSet *charSet,
++                            const CharacterRange *range,
++                            const CharacterRange *end)
++{
++    for ( ; range < end; ++range)
++        AddCharacterRangeToCharSet(charSet, range->start, range->end);
++}
++
++static void
++AddCharacterRangesInvertedToCharSet(RECharSet *charSet,
++                                    const CharacterRange *range,
++                                    const CharacterRange *end)
++{
++    uint16 previous = 0;
++    for ( ; range < end; ++range) {
++        AddCharacterRangeToCharSet(charSet, previous, range->start - 1);
++        previous = range->end + 1;
++    }
++    AddCharacterRangeToCharSet(charSet, previous, charSet->length);
++}
++
+ /* Compile the source of the class into a RECharSet */
+ static JSBool
+ ProcessCharSet(REGlobalData *gData, RECharSet *charSet)
+ {
+     const jschar *src, *end;
+     JSBool inRange = JS_FALSE;
+     jschar rangeStart = 0;
+     uintN byteLength, n;
+@@ -2406,34 +2467,32 @@ ProcessCharSet(REGlobalData *gData, RECh
+                 continue;   /* don't need range processing */
+               case 'D':
+                 AddCharacterRangeToCharSet(charSet, 0, '0' - 1);
+                 AddCharacterRangeToCharSet(charSet,
+                                            (jschar)('9' + 1),
+                                            (jschar)charSet->length);
+                 continue;
+               case 's':
+-                for (i = (intN)charSet->length; i >= 0; i--)
+-                    if (JS_ISSPACE(i))
+-                        AddCharacterToCharSet(charSet, (jschar)i);
++                AddCharacterRangesToCharSet(charSet,
++                  WhiteSpaceRanges,
++                  WhiteSpaceRanges + JS_ARRAY_LENGTH(WhiteSpaceRanges));
+                 continue;
+               case 'S':
+-                for (i = (intN)charSet->length; i >= 0; i--)
+-                    if (!JS_ISSPACE(i))
+-                        AddCharacterToCharSet(charSet, (jschar)i);
++                AddCharacterRangesInvertedToCharSet(charSet,
++                  WhiteSpaceRanges,
++                  WhiteSpaceRanges + JS_ARRAY_LENGTH(WhiteSpaceRanges));
+                 continue;
+               case 'w':
+-                for (i = (intN)charSet->length; i >= 0; i--)
+-                    if (JS_ISWORD(i))
+-                        AddCharacterToCharSet(charSet, (jschar)i);
++                AddCharacterRangesToCharSet(charSet,
++                  WordRanges, WordRanges + JS_ARRAY_LENGTH(WordRanges));
+                 continue;
+               case 'W':
+-                for (i = (intN)charSet->length; i >= 0; i--)
+-                    if (!JS_ISWORD(i))
+-                        AddCharacterToCharSet(charSet, (jschar)i);
++                AddCharacterRangesInvertedToCharSet(charSet,
++                  WordRanges, WordRanges + JS_ARRAY_LENGTH(WordRanges));
+                 continue;
+               default:
+                 thisCh = c;
+                 break;
+ 
+             }
+             break;
+ 
+@@ -3239,18 +3298,29 @@ ExecuteREBytecode(REGlobalData *gData, R
+                 (REBackTrackData *) ((char *)backTrackData - backTrackData->sz);
+             x->cp = backTrackData->cp;
+             pc = backTrackData->backtrack_pc;
+             op = (REOp) backTrackData->backtrack_op;
+             JS_ASSERT(op < REOP_LIMIT);
+             gData->stateStackTop = backTrackData->saveStateStackTop;
+             JS_ASSERT(gData->stateStackTop);
+ 
++#if _MSC_VER >= 1400
++            if ((sizeof(REProgState) & 3) == 0) {
++                __movsd((unsigned long *)gData->stateStack,
++                        (unsigned long *)(backTrackData + 1),
++                        (sizeof(REProgState) * backTrackData->saveStateStackTop) >> 2);
++            } else {
++                memcpy(gData->stateStack, backTrackData + 1,
++                       sizeof(REProgState) * backTrackData->saveStateStackTop);
++            }
++#else
+             memcpy(gData->stateStack, backTrackData + 1,
+                    sizeof(REProgState) * backTrackData->saveStateStackTop);
++#endif
+             curState = &gData->stateStack[gData->stateStackTop - 1];
+ 
+             if (backTrackData->parenCount) {
+                 memcpy(&x->parens[backTrackData->parenIndex],
+                        (char *)(backTrackData + 1) +
+                        sizeof(REProgState) * backTrackData->saveStateStackTop,
+                        sizeof(RECapture) * backTrackData->parenCount);
+                 parenSoFar = backTrackData->parenIndex + backTrackData->parenCount;

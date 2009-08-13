@@ -1,0 +1,62 @@
+Index: gfx/src/thebes/nsThebesFontMetrics.cpp
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/src/thebes/nsThebesFontMetrics.cpp,v
+retrieving revision 1.47
+diff -u -8 -p -r1.47 nsThebesFontMetrics.cpp
+--- gfx/src/thebes/nsThebesFontMetrics.cpp	15 Apr 2008 23:34:06 -0000	1.47
++++ gfx/src/thebes/nsThebesFontMetrics.cpp	24 May 2008 06:30:54 -0000
+@@ -92,18 +92,24 @@ nsThebesFontMetrics::Init(const nsFont& 
+ }
+ 
+ NS_IMETHODIMP
+ nsThebesFontMetrics::Destroy()
+ {
+     return NS_OK;
+ }
+ 
++#define round_to_nscoord(d) \
++    ((((gfxFloat)(d) > (gfxFloat)INT_MIN) && ((gfxFloat)(d) <= (gfxFloat)INT_MAX)) ? \
++    ((nscoord)_cairo_lround(d)) : ((nscoord)floor((d) + 0.5)))
++#define NS_round(x) \
++    ((x) >= 0.0) ? ((double)round_tt(x)) : ((double)ceil((x) - 0.5))
++
+ // XXXTODO get rid of this macro
+-#define ROUND_TO_TWIPS(x) (nscoord)floor(((x) * mP2A) + 0.5)
++#define ROUND_TO_TWIPS(x) round_to_nscoord(((x) * mP2A))
+ #define CEIL_TO_TWIPS(x) (nscoord)NS_ceil((x) * mP2A)
+ 
+ const gfxFont::Metrics& nsThebesFontMetrics::GetMetrics() const
+ {
+     return mFontGroup->GetFontAt(0)->GetMetrics();
+ }
+ 
+ NS_IMETHODIMP
+@@ -147,25 +153,25 @@ nsThebesFontMetrics::GetUnderline(nscoor
+ // GetHeight/GetMaxAscent/GetMaxDescent/GetMaxHeight must contain the
+ // text-decoration lines drawable area. See bug 421353.
+ // BE CAREFUL for rounding each values. The logic MUST be same as
+ // nsCSSRendering::GetTextDecorationRectInternal's.
+ 
+ static gfxFloat ComputeMaxDescent(const gfxFont::Metrics& aMetrics,
+                                   gfxFontGroup* aFontGroup)
+ {
+-    gfxFloat offset = NS_floor(-aFontGroup->GetUnderlineOffset() + 0.5);
++    gfxFloat offset = round_tt(-aFontGroup->GetUnderlineOffset());
+     gfxFloat size = NS_round(aMetrics.underlineSize);
+-    gfxFloat minDescent = NS_floor(offset + size + 0.5);
++    gfxFloat minDescent = round_tt(offset + size);
+     return PR_MAX(minDescent, aMetrics.maxDescent);
+ }
+ 
+ static gfxFloat ComputeMaxAscent(const gfxFont::Metrics& aMetrics)
+ {
+-    return NS_floor(aMetrics.maxAscent + 0.5);
++    return round_tt(aMetrics.maxAscent);
+ }
+ 
+ NS_IMETHODIMP
+ nsThebesFontMetrics::GetHeight(nscoord &aHeight)
+ {
+     aHeight = CEIL_TO_TWIPS(ComputeMaxAscent(GetMetrics())) +
+         CEIL_TO_TWIPS(ComputeMaxDescent(GetMetrics(), mFontGroup));
+     return NS_OK;

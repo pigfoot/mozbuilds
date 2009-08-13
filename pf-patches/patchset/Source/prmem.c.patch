@@ -1,0 +1,32 @@
+Index: nsprpub/pr/src/malloc/prmem.c
+===================================================================
+RCS file: /cvsroot/mozilla/nsprpub/pr/src/malloc/prmem.c,v
+retrieving revision 3.19
+diff -u -8 -p -r3.19 prmem.c
+--- nsprpub/pr/src/malloc/prmem.c	21 Jul 2005 18:22:53 -0000	3.19
++++ nsprpub/pr/src/malloc/prmem.c	8 Apr 2008 15:05:00 -0000
+@@ -495,16 +495,24 @@ PR_IMPLEMENT(void) PR_Free(void *ptr)
+ /*
+ ** The PR_Malloc, PR_Calloc, PR_Realloc, and PR_Free functions simply
+ ** call their libc equivalents now.  This may seem redundant, but it
+ ** ensures that we are calling into the same runtime library.  On
+ ** Win32, it is possible to have multiple runtime libraries (e.g.,
+ ** objects compiled with /MD and /MDd) in the same process, and
+ ** they maintain separate heaps, which cannot be mixed.
+ */
++
++#ifdef _DLL
++#undef PR_Malloc
++#undef PR_Calloc
++#undef PR_Realloc
++#undef PR_Free
++#endif
++
+ PR_IMPLEMENT(void *) PR_Malloc(PRUint32 size)
+ {
+ #if defined (WIN16)
+     return PR_MD_malloc( (size_t) size);
+ #else
+     return malloc(size);
+ #endif
+ }

@@ -1,0 +1,23 @@
+Index: gfx/cairo/libpixman/src/pixman-private.h
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/cairo/libpixman/src/pixman-private.h,v
+retrieving revision 1.23
+diff -u -8 -p -r1.23 pixman-private.h
+--- gfx/cairo/libpixman/src/pixman-private.h	7 Apr 2008 05:09:45 -0000	1.23
++++ gfx/cairo/libpixman/src/pixman-private.h	25 Jun 2008 14:48:06 -0000
+@@ -888,9 +888,15 @@ void pixman_timer_register (PixmanTimer 
+ 	begin##tname = OIL_STAMP();
+ 
+ #define TIMER_END(tname)						\
+         timer##tname.total += OIL_STAMP() - begin##tname;		\
+     }
+ 
+ #endif /* PIXMAN_TIMING */
+ 
++#ifdef _MSC_VER
++#define SCANLINE_BUFFER_LENGTH  2048
++#define OMP_MAX_CPU_COUNTS_TT   4
++extern int omp_cpu_counts;
++#endif
++
+ #endif /* PIXMAN_PRIVATE_H */

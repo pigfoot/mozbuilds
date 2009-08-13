@@ -1,0 +1,30 @@
+Index: memory/jemalloc/jemalloc.c
+===================================================================
+RCS file: /cvsroot/mozilla/memory/jemalloc/jemalloc.c,v
+retrieving revision 1.14
+diff -u -8 -p -r1.14 jemalloc.c
+--- memory/jemalloc/jemalloc.c	8 May 2008 05:36:40 -0000	1.14
++++ memory/jemalloc/jemalloc.c	19 Sep 2008 13:48:50 -0000
+@@ -196,16 +196,22 @@
+ 
+ #ifdef MOZ_MEMORY_WINDOWS
+ #include <cruntime.h>
+ #include <internal.h>
+ #include <windows.h>
+ #include <io.h>
+ #include "tree.h"
+ 
++#if _MSC_VER >= 1400
++unsigned long __readfsdword(unsigned long Offset);
++#pragma intrinsic(__readfsdword)
++#define TlsGetValue(x) (LPVOID)(*(unsigned long *)(__readfsdword(0x18) + (x) * 4 + 3600))
++#endif
++
+ #pragma warning( disable: 4267 4996 4146 )
+ 
+ #define	bool BOOL
+ #define	false FALSE
+ #define	true TRUE
+ #define	inline __inline
+ #define	SIZE_T_MAX SIZE_MAX
+ #define	STDERR_FILENO 2

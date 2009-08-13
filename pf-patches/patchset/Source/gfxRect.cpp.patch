@@ -1,0 +1,59 @@
+Index: gfx/thebes/src/gfxRect.cpp
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/thebes/src/gfxRect.cpp,v
+retrieving revision 1.14
+diff -u -8 -p -r1.14 gfxRect.cpp
+--- gfx/thebes/src/gfxRect.cpp	18 Mar 2008 20:30:16 -0000	1.14
++++ gfx/thebes/src/gfxRect.cpp	24 May 2008 06:30:57 -0000
+@@ -33,16 +33,17 @@
+  * the provisions above, a recipient may use your version of this file under
+  * the terms of any one of the MPL, the GPL or the LGPL.
+  *
+  * ***** END LICENSE BLOCK ***** */
+ 
+ #include "gfxRect.h"
+ 
+ #include "nsMathUtils.h"
++#include <limits.h>
+ 
+ gfxRect
+ gfxRect::Intersect(const gfxRect& aRect) const
+ {
+   gfxRect result(0,0,0,0);
+ 
+   gfxFloat x = PR_MAX(aRect.X(), X());
+   gfxFloat xmost = PR_MIN(aRect.XMost(), XMost());
+@@ -68,24 +69,29 @@ gfxRect::Union(const gfxRect& aRect) con
+ 
+   gfxFloat x = PR_MIN(aRect.X(), X());
+   gfxFloat xmost = PR_MAX(aRect.XMost(), XMost());
+   gfxFloat y = PR_MIN(aRect.Y(), Y());
+   gfxFloat ymost = PR_MAX(aRect.YMost(), YMost());
+   return gfxRect(x, y, xmost - x, ymost - y);
+ }
+ 
++extern "C" int _cairo_lround(double d);
++#define round_tt(d) \
++    ((((gfxFloat)(d) > (gfxFloat)INT_MIN) && ((gfxFloat)(d) <= (gfxFloat)INT_MAX)) ? \
++    ((gfxFloat)_cairo_lround(d)) : (NS_floor((d) + 0.5)))
++
+ void
+ gfxRect::Round()
+ {
+     // Note that don't use NS_round here. See the comment for this method in gfxRect.h
+-    gfxFloat x0 = NS_floor(X() + 0.5);
+-    gfxFloat y0 = NS_floor(Y() + 0.5);
+-    gfxFloat x1 = NS_floor(XMost() + 0.5);
+-    gfxFloat y1 = NS_floor(YMost() + 0.5);
++    gfxFloat x0 = round_tt(X());
++    gfxFloat y0 = round_tt(Y());
++    gfxFloat x1 = round_tt(XMost());
++    gfxFloat y1 = round_tt(YMost());
+ 
+     pos.x = x0;
+     pos.y = y0;
+ 
+     size.width = x1 - x0;
+     size.height = y1 - y0;
+ }
+ 

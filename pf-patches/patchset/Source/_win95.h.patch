@@ -1,0 +1,29 @@
+Index: nsprpub/pr/include/md/_win95.h
+===================================================================
+RCS file: /cvsroot/mozilla/nsprpub/pr/include/md/_win95.h,v
+retrieving revision 3.34
+diff -u -8 -p -r3.34 _win95.h
+--- nsprpub/pr/include/md/_win95.h	14 Mar 2007 18:00:43 -0000	3.34
++++ nsprpub/pr/include/md/_win95.h	19 Sep 2008 13:31:23 -0000
+@@ -497,16 +497,21 @@ extern __declspec(thread) struct PRThrea
+ extern __declspec(thread) struct PRThread *_pr_thread_last_run;
+ #define _MD_LAST_THREAD() _pr_thread_last_run
+ #define _MD_SET_LAST_THREAD(_thread) (_pr_thread_last_run = 0)
+ 
+ extern __declspec(thread) struct _PRCPU *_pr_currentCPU;
+ #define _MD_CURRENT_CPU() _pr_currentCPU
+ #define _MD_SET_CURRENT_CPU(_cpu) (_pr_currentCPU = 0)
+ #else /* _PR_USE_STATIC_TLS */
++#if _MSC_VER >= 1400
++unsigned long __readfsdword(unsigned long Offset);
++#pragma intrinsic(__readfsdword)
++#define TlsGetValue(x) (*(unsigned long *)(__readfsdword(0x18) + (x) * 4 + 3600))
++#endif
+ extern DWORD _pr_currentThreadIndex;
+ #define _MD_GET_ATTACHED_THREAD() ((PRThread *) TlsGetValue(_pr_currentThreadIndex))
+ #define _MD_SET_CURRENT_THREAD(_thread) TlsSetValue(_pr_currentThreadIndex, (_thread))
+ 
+ extern DWORD _pr_lastThreadIndex;
+ #define _MD_LAST_THREAD() ((PRThread *) TlsGetValue(_pr_lastThreadIndex))
+ #define _MD_SET_LAST_THREAD(_thread) TlsSetValue(_pr_lastThreadIndex, 0)
+ 

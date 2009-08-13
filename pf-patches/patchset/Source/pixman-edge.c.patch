@@ -1,0 +1,72 @@
+Index: gfx/cairo/libpixman/src/pixman-edge.c
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/cairo/libpixman/src/pixman-edge.c,v
+retrieving revision 1.12
+diff -u -8 -p -r1.12 pixman-edge.c
+--- gfx/cairo/libpixman/src/pixman-edge.c	27 Jan 2008 22:52:18 -0000	1.12
++++ gfx/cairo/libpixman/src/pixman-edge.c	13 Feb 2008 09:06:10 -0000
+@@ -127,16 +127,18 @@ fbRasterizeEdges8 (pixman_image_t       
+ {
+     pixman_fixed_t  y = t;
+     uint32_t  *line;
+     int fill_start = -1, fill_end = -1;
+     int fill_size = 0;
+     uint32_t *buf = (image)->bits.bits;
+     int stride = (image)->bits.rowstride;
+     int width = (image)->bits.width;
++    pixman_fixed_t rx_old = 0;
++    int rxs_old = 0, rxi_old = 0;
+ 
+     line = buf + pixman_fixed_to_int (y) * stride;
+ 
+     for (;;)
+     {
+         uint8_t *ap = (uint8_t *) line;
+ 	pixman_fixed_t	lx, rx;
+ 	int	lxi, rxi;
+@@ -153,23 +155,40 @@ fbRasterizeEdges8 (pixman_image_t       
+ 	     */
+ 	    rx = pixman_int_to_fixed (width) - 1;
+ 
+ 	/* Skip empty (or backwards) sections */
+ 	if (rx > lx)
+ 	{
+             int lxs, rxs;
+ 
+-	    /* Find pixel bounds for span. */
++            /* Find pixel bounds for span. */
++            /* Sample coverage for edge pixels */
++            if (lx == 0)
++            {
++	    lxi = 0;
++	    lxs = 0;
++            }
++            else
++            {
+ 	    lxi = pixman_fixed_to_int (lx);
+-	    rxi = pixman_fixed_to_int (rx);
++	    lxs = RenderSamplesX (lx, 8);
++            }
+ 
+-            /* Sample coverage for edge pixels */
+-            lxs = RenderSamplesX (lx, 8);
+-            rxs = RenderSamplesX (rx, 8);
++            if (rx == rx_old)
++            {
++	    rxi = rxi_old;
++	    rxs = rxs_old;
++            }
++            else
++            {
++	    rxi_old = rxi = pixman_fixed_to_int (rx);
++	    rxs_old = rxs = RenderSamplesX (rx, 8);
++	    rx_old = rx;
++            }
+ 
+             /* Add coverage across row */
+ 	    if (lxi == rxi)
+ 	    {
+ 		WRITE(image, ap +lxi, clip255 (READ(image, ap + lxi) + rxs - lxs));
+ 	    }
+ 	    else
+ 	    {

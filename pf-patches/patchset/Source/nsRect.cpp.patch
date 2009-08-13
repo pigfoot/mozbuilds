@@ -1,0 +1,78 @@
+Index: gfx/src/nsRect.cpp
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/src/nsRect.cpp,v
+retrieving revision 3.27
+diff -u -8 -p -r3.27 nsRect.cpp
+--- gfx/src/nsRect.cpp	31 Mar 2008 09:40:54 -0000	3.27
++++ gfx/src/nsRect.cpp	10 Aug 2008 02:34:31 -0000
+@@ -180,50 +180,70 @@ nsRect& nsRect::ScaleRoundOut(float aSca
+   nscoord bottom = NSToCoordCeil(float(YMost()) * aScale);
+   x = NSToCoordFloor(float(x) * aScale);
+   y = NSToCoordFloor(float(y) * aScale);
+   width = (right - x);
+   height = (bottom - y);
+   return *this;
+ }
+ 
++#if defined(TT_MEMUTIL) && _M_IX86_FP >= 1
++#pragma float_control(push)
++#pragma float_control(precise, on)
++#endif
++
+ nsRect& nsRect::ScaleRoundOutInverse(float aScale) 
+ {
+   nscoord right = NSToCoordCeil(float(XMost()) / aScale);
+   nscoord bottom = NSToCoordCeil(float(YMost()) / aScale);
+   x = NSToCoordFloor(float(x) / aScale);
+   y = NSToCoordFloor(float(y) / aScale);
+   width = (right - x);
+   height = (bottom - y);
+   return *this;
+ }
+ 
++#if defined(TT_MEMUTIL) && _M_IX86_FP >= 1
++#pragma float_control(pop)
++#endif
++
+ // scale the rect but round to largest contained rect
+ nsRect& nsRect::ScaleRoundIn(float aScale) 
+ {
+   nscoord right = NSToCoordFloor(float(XMost()) * aScale);
+   nscoord bottom = NSToCoordFloor(float(YMost()) * aScale);
+   x = NSToCoordCeil(float(x) * aScale);
+   y = NSToCoordCeil(float(y) * aScale);
+   width = (right - x);
+   height = (bottom - y);
+   return *this;
+ }
+ 
++#if defined(TT_MEMUTIL) && _M_IX86_FP >= 1
++#pragma float_control(push)
++#pragma float_control(precise, on)
++#define NSToCoordRound(aValue) NS_lroundup30(aValue)
++#endif
++
+ nsRect& nsRect::ScaleRoundPreservingCentersInverse(float aScale)
+ {
+   nscoord right = NSToCoordRound(float(XMost()) / aScale);
+   nscoord bottom = NSToCoordRound(float(YMost()) / aScale);
+   x = NSToCoordRound(float(x) / aScale);
+   y = NSToCoordRound(float(y) / aScale);
+   width = (right - x);
+   height = (bottom - y);
+   return *this;
+ }
+ 
++#if defined(TT_MEMUTIL) && _M_IX86_FP >= 1
++#pragma float_control(pop)
++#undef NSToCoordRound
++#endif
++
+ #ifdef DEBUG
+ // Diagnostics
+ 
+ FILE* operator<<(FILE* out, const nsRect& rect)
+ {
+   nsAutoString tmp;
+ 
+   // Output the coordinates in fractional pixels so they're easier to read

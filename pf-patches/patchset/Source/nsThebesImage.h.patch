@@ -1,0 +1,63 @@
+Index: gfx/src/thebes/nsThebesImage.h
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/src/thebes/nsThebesImage.h,v
+retrieving revision 1.33
+diff -u -8 -p -r1.33 nsThebesImage.h
+--- gfx/src/thebes/nsThebesImage.h	31 Mar 2008 09:40:54 -0000	1.33
++++ gfx/src/thebes/nsThebesImage.h	7 Oct 2008 12:43:44 -0000
+@@ -118,16 +118,29 @@ public:
+         if (mQuartzSurface)
+             return mQuartzSurface;
+ #endif
+         return mImageSurface;
+     }
+ 
+     void SetHasNoAlpha();
+ 
++#ifdef XP_WIN
++    void ResetScaledSurface() {
++        if (mScaledImageSurface) {
++            mScaledImageSurface = nsnull;
++        }
++        mMakeScaledImage = PR_FALSE;
++        mScaledDrawCounts = 0;
++        mCachedDrawRequiredCounts = 0;
++        mTargetWidth_old = 0.0;
++        mTargetHeight_old = 0.0;
++    }
++#endif
++
+ protected:
+     static PRBool AllowedImageSize(PRInt32 aWidth, PRInt32 aHeight) {
+         NS_ASSERTION(aWidth > 0, "invalid image width");
+         NS_ASSERTION(aHeight > 0, "invalid image height");
+ 
+         // reject over-wide or over-tall images
+         const PRInt32 k64KLimit = 0x0000FFFF;
+         if (NS_UNLIKELY(aWidth > k64KLimit || aHeight > k64KLimit )) {
+@@ -172,16 +185,25 @@ protected:
+     nsRefPtr<gfxImageSurface> mImageSurface;
+     nsRefPtr<gfxASurface> mOptSurface;
+ #if defined(XP_WIN)
+     nsRefPtr<gfxWindowsSurface> mWinSurface;
+ #elif defined(XP_MACOSX)
+     nsRefPtr<gfxQuartzImageSurface> mQuartzSurface;
+ #endif
+ 
++#ifdef XP_WIN
++    nsRefPtr<gfxImageSurface> mScaledImageSurface;
++    PRBool mMakeScaledImage;
++    unsigned int mScaledDrawCounts;
++    unsigned int mCachedDrawRequiredCounts;
++    gfxFloat mTargetWidth_old;
++    gfxFloat mTargetHeight_old;
++#endif
++
+     PRUint8 mAlphaDepth;
+ 
+     // this function should return true if
+     // we should (temporarily) not allocate any
+     // platform native surfaces and instead use
+     // image surfaces for everything.
+     static PRBool ShouldUseImageSurfaces();
+ };

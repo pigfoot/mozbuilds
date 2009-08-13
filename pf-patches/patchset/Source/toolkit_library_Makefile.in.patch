@@ -1,0 +1,21 @@
+Index: toolkit/library/Makefile.in
+===================================================================
+RCS file: /cvsroot/mozilla/toolkit/library/Makefile.in,v
+retrieving revision 1.69
+diff -u -8 -p -r1.69 Makefile.in
+--- toolkit/library/Makefile.in	8 May 2008 09:20:45 -0000	1.69
++++ toolkit/library/Makefile.in	12 May 2008 10:14:25 -0000
+@@ -248,8 +248,13 @@ endif
+ ifdef MOZ_JAVAXPCOM
+ dlldeps-javaxpcom.cpp: $(topsrcdir)/extensions/java/xpcom/src/dlldeps-javaxpcom.cpp
+ 	$(INSTALL) $^ .
+ endif
+ 
+ ifneq (,$(filter layout-debug,$(MOZ_EXTENSIONS)))
+ DEFINES += -DMOZ_ENABLE_EXTENSION_LAYOUT_DEBUG
+ endif
++
++ifdef _MSC_VER
++CFLAGS += -wd4624 -wd4952
++CXXFLAGS += -wd4624 -wd4952
++endif

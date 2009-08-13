@@ -1,0 +1,62 @@
+Index: widget/src/windows/nsWindow.cpp
+===================================================================
+RCS file: /cvsroot/mozilla/widget/src/windows/nsWindow.cpp,v
+retrieving revision 3.746
+diff -u -8 -p -r3.746 nsWindow.cpp
+--- widget/src/windows/nsWindow.cpp	6 Oct 2008 16:19:59 -0000	3.746
++++ widget/src/windows/nsWindow.cpp	10 Nov 2008 11:02:18 -0000
+@@ -1130,36 +1130,45 @@ nsWindow::EventIsInsideWindow(UINT Msg, 
+   POINT mp;
+   mp.x = GET_X_LPARAM(pos);
+   mp.y = GET_Y_LPARAM(pos);
+ 
+   // was the event inside this window?
+   return (PRBool) PtInRect(&r, mp);
+ }
+ 
+-static char sPropName[40] = "";
+-static char* GetNSWindowPropName() {
+-  if (!*sPropName)
+-  {
+-    _snprintf(sPropName, 39, "MozillansIWidgetPtr%p", _getpid());
++class CAtom_MozillansIWidgetPtr {
++public:
++  CAtom_MozillansIWidgetPtr() {
++    wchar_t sPropName[40] = L"";
++    _snwprintf(sPropName, 39, L"MozillansIWidgetPtr%p", _getpid());
+     sPropName[39] = '\0';
++    atom = ::GlobalAddAtomW(sPropName);
++  }
++  ~CAtom_MozillansIWidgetPtr() {
++    ::GlobalDeleteAtom(atom);
+   }
+-  return sPropName;
++  ATOM atom;
++};
++static CAtom_MozillansIWidgetPtr gaMiwp;
++
++static LPCWSTR GetNSWindowPropName() {
++  return (LPCWSTR)(DWORD)gaMiwp.atom;
+ }
+ 
+ nsWindow * nsWindow::GetNSWindowPtr(HWND aWnd) {
+-  return (nsWindow *) ::GetPropA(aWnd, GetNSWindowPropName());
++  return (nsWindow *) ::GetPropW(aWnd, GetNSWindowPropName());
+ }
+ 
+ BOOL nsWindow::SetNSWindowPtr(HWND aWnd, nsWindow * ptr) {
+   if (ptr == NULL) {
+-    ::RemovePropA(aWnd, GetNSWindowPropName());
++    ::RemovePropW(aWnd, GetNSWindowPropName());
+     return TRUE;
+   } else {
+-    return ::SetPropA(aWnd, GetNSWindowPropName(), (HANDLE)ptr);
++    return ::SetPropW(aWnd, GetNSWindowPropName(), (HANDLE)ptr);
+   }
+ }
+ 
+ //-------------------------------------------------------------------------
+ //
+ // the nsWindow procedure for all nsWindows in this toolkit
+ //
+ //-------------------------------------------------------------------------

@@ -1,0 +1,25 @@
+Index: xpcom/typelib/xpt/tools/Makefile.in
+===================================================================
+RCS file: /cvsroot/mozilla/xpcom/typelib/xpt/tools/Makefile.in,v
+retrieving revision 1.33
+diff -u -8 -p -r1.33 Makefile.in
+--- xpcom/typelib/xpt/tools/Makefile.in	28 May 2008 18:42:32 -0000	1.33
++++ xpcom/typelib/xpt/tools/Makefile.in	4 Jun 2008 20:37:57 -0000
+@@ -85,16 +85,17 @@ ifdef WINCE
+ # Compile directly against the static lib, so we can use the tools
+ # during the build without the shared library path being set.
+ HOST_CFLAGS +=  -DEXPORT_XPT_API
+ LDFLAGS += -NODEFAULTLIB:MSVCRT
+ endif
+ 
+ endif
+ 
++LDFLAGS := $(filter-out -LTCG:PGI -LTCG:PGINSTRUMENT -LTCG:PGU -LTCG:PGUPDATE -LTCG:PGO -LTCG:PGOPTIMIZE,$(LDFLAGS))
+ 
+ # Build xpt_link and xpt_dump early.  (libs creates .deps used by libs.)
+ export::
+ 	@$(MAKE) libs
+ 
+ # XXX, bug 417045, make -jN combines badly with -save-temps in   
+ # CFLAGS/CXXFLAGS (for stabs symbols with XCode3)
+ ifeq (cocoa,$(MOZ_WIDGET_TOOLKIT))

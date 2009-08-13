@@ -1,0 +1,123 @@
+Index: xpcom/glue/nsCOMPtr.h
+===================================================================
+RCS file: /cvsroot/mozilla/xpcom/glue/nsCOMPtr.h,v
+retrieving revision 1.131
+diff -u -8 -p -r1.131 nsCOMPtr.h
+--- xpcom/glue/nsCOMPtr.h	11 Nov 2007 18:56:45 -0000	1.131
++++ xpcom/glue/nsCOMPtr.h	11 Dec 2007 13:41:12 -0000
+@@ -346,17 +346,37 @@ class NS_COM_GLUE nsQueryInterface
+     public:
+       explicit
+       nsQueryInterface( nsISupports* aRawPtr )
+           : mRawPtr(aRawPtr)
+         {
+           // nothing else to do here
+         }
+ 
+-      nsresult NS_FASTCALL operator()( const nsIID& aIID, void** ) const;
++#if _MSC_VER >= 1200
++#pragma inline_recursion(on)
++#endif
++      nsresult NS_FASTCALL operator()( const nsIID& aIID, void** answer ) const
++        {
++          nsresult status;
++          if ( mRawPtr )
++          {
++            status = mRawPtr->QueryInterface(aIID, answer);
++#ifdef NSCAP_FEATURE_TEST_NONNULL_QUERY_SUCCEEDS
++            NS_ASSERTION(NS_SUCCEEDED(status), "interface not found---were you expecting that?");
++#endif
++          }
++          else
++            status = NS_ERROR_NULL_POINTER;
++
++          return status;
++        }
++#if _MSC_VER >= 1200
++#pragma inline_recursion(off)
++#endif
+ 
+     private:
+       nsISupports*  mRawPtr;
+   };
+ 
+ class NS_COM_GLUE nsQueryInterfaceWithError
+   {
+     public:
+@@ -492,26 +512,71 @@ class nsCOMPtr_base
+     public:
+ 
+       nsCOMPtr_base( nsISupports* rawPtr = 0 )
+           : mRawPtr(rawPtr)
+         {
+           // nothing else to do here
+         }
+ 
+-      NS_COM_GLUE NS_CONSTRUCTOR_FASTCALL ~nsCOMPtr_base();
++#if _MSC_VER >= 1200
++#pragma inline_recursion(on)
++#endif
++      NS_COM_GLUE NS_CONSTRUCTOR_FASTCALL ~nsCOMPtr_base()
++        {
++          NSCAP_LOG_RELEASE(this, mRawPtr);
++          if ( mRawPtr )
++            NSCAP_RELEASE(this, mRawPtr);
++        }
++#if _MSC_VER >= 1200
++#pragma inline_recursion(off)
++#endif
++
++#if _MSC_VER >= 1200
++#pragma inline_recursion(on)
++#endif
++      NS_COM_GLUE void NS_FASTCALL   assign_with_AddRef( nsISupports* rawPtr )
++        {
++          if ( rawPtr )
++            NSCAP_ADDREF(this, rawPtr);
++          assign_assuming_AddRef(rawPtr);
++        }
++#if _MSC_VER >= 1200
++#pragma inline_recursion(off)
++#endif
++
++      NS_COM_GLUE void NS_FASTCALL   assign_from_qi( const nsQueryInterface qi, const nsIID& iid )
++        {
++          void* newRawPtr;
++          if ( NS_FAILED( qi(iid, &newRawPtr) ) )
++            newRawPtr = 0;
++          assign_assuming_AddRef(static_cast<nsISupports*>(newRawPtr));
++        }
++
++      NS_COM_GLUE void NS_FASTCALL   assign_from_qi_with_error( const nsQueryInterfaceWithError& qi, const nsIID& iid )
++        {
++          void* newRawPtr;
++          if ( NS_FAILED( qi(iid, &newRawPtr) ) )
++            newRawPtr = 0;
++          assign_assuming_AddRef(static_cast<nsISupports*>(newRawPtr));
++        }
+ 
+-      NS_COM_GLUE void NS_FASTCALL   assign_with_AddRef( nsISupports* );
+-      NS_COM_GLUE void NS_FASTCALL   assign_from_qi( const nsQueryInterface, const nsIID& );
+-      NS_COM_GLUE void NS_FASTCALL   assign_from_qi_with_error( const nsQueryInterfaceWithError&, const nsIID& );
+       NS_COM_GLUE void NS_FASTCALL   assign_from_gs_cid( const nsGetServiceByCID, const nsIID& );
+       NS_COM_GLUE void NS_FASTCALL   assign_from_gs_cid_with_error( const nsGetServiceByCIDWithError&, const nsIID& );
+       NS_COM_GLUE void NS_FASTCALL   assign_from_gs_contractid( const nsGetServiceByContractID, const nsIID& );
+       NS_COM_GLUE void NS_FASTCALL   assign_from_gs_contractid_with_error( const nsGetServiceByContractIDWithError&, const nsIID& );
+-      NS_COM_GLUE void NS_FASTCALL   assign_from_helper( const nsCOMPtr_helper&, const nsIID& );
++
++      NS_COM_GLUE void NS_FASTCALL   assign_from_helper( const nsCOMPtr_helper& helper, const nsIID& iid )
++        {
++          void* newRawPtr;
++          if ( NS_FAILED( helper(iid, &newRawPtr) ) )
++            newRawPtr = 0;
++          assign_assuming_AddRef(static_cast<nsISupports*>(newRawPtr));
++        }
++
+       NS_COM_GLUE void** NS_FASTCALL begin_assignment();
+ 
+     protected:
+       NS_MAY_ALIAS_PTR(nsISupports) mRawPtr;
+ 
+       void
+       assign_assuming_AddRef( nsISupports* newPtr )
+         {

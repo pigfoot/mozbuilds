@@ -1,0 +1,36 @@
+Index: gfx/cairo/libpixman/src/pixman-mmx.h
+===================================================================
+RCS file: /cvsroot/mozilla/gfx/cairo/libpixman/src/pixman-mmx.h,v
+retrieving revision 1.6
+diff -u -8 -p -r1.6 pixman-mmx.h
+--- gfx/cairo/libpixman/src/pixman-mmx.h	7 Apr 2008 05:07:39 -0000	1.6
++++ gfx/cairo/libpixman/src/pixman-mmx.h	25 Jun 2008 14:47:51 -0000
+@@ -152,16 +152,28 @@ void fbCompositeSolidMask_nx8x8888mmx (p
+ 				       int16_t      xSrc,
+ 				       int16_t      ySrc,
+ 				       int16_t      xMask,
+ 				       int16_t      yMask,
+ 				       int16_t      xDst,
+ 				       int16_t      yDst,
+ 				       uint16_t     width,
+ 				       uint16_t     height);
++void fbCompositeSolidMask_nx8x8888omp (pixman_op_t      op,
++				       pixman_image_t * pSrc,
++				       pixman_image_t * pMask,
++				       pixman_image_t * pDst,
++				       int16_t      xSrc,
++				       int16_t      ySrc,
++				       int16_t      xMask,
++				       int16_t      yMask,
++				       int16_t      xDst,
++				       int16_t      yDst,
++				       uint16_t     width,
++				       uint16_t     height);
+ void fbCompositeIn_nx8x8mmx (pixman_op_t	op,
+ 			pixman_image_t * pSrc,
+ 			pixman_image_t * pMask,
+ 			pixman_image_t * pDst,
+ 			int16_t      xSrc,
+ 			int16_t      ySrc,
+ 			int16_t      xMask,
+ 			int16_t      yMask,
