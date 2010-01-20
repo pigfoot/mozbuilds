@@ -9,3 +9,4 @@
 "\e\e[C": forward-word
 "\e\e[D": backward-word
 set completion-ignore-case On
+set bell-style none

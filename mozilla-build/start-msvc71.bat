@@ -8,7 +8,6 @@ echo "Mozilla tools directory: %MOZBUILDDIR%"
 
 REM Get MSVC paths
 call "%MOZBUILDDIR%guess-msvc.bat"
-
 if "%VC71DIR%"=="" (
     ECHO "Microsoft Visual C++ version 7.1 was not found. Exiting."
     pause
@@ -25,6 +24,14 @@ rem Prepend MSVC paths
 call "%VC71DIR%\Bin\vcvars32.bat"
 
 rem Prepend SDK paths if MOZBUILD_USE_SDK is defined and the SDK exists
+set MOZBUILD_USE_SDK=1
+if defined MOZBUILD_USE_SDK (
+    if not "%PSDKDIR%"=="" (
+        SET PATH=%PSDKDIR%\bin;%PATH%
+        SET LIB=%PSDKDIR%\lib;%LIB%
+        SET INCLUDE=%INCLUDE%;%PSDKDIR%include
+    )
+)
 if defined MOZBUILD_USE_SDK (
     if not "%SDKDIR%"=="" (
         rem Prepend SDK paths - Don't use the SDK SetEnv.cmd because it pulls in
@@ -36,9 +43,9 @@ if defined MOZBUILD_USE_SDK (
 
         SET PATH=%SDKDIR%\bin;%PATH%
         SET LIB=%SDKDIR%\lib;%LIB%
-        SET INCLUDE=%SDKDIR%\include;%INCLUDE%
+        SET INCLUDE=%INCLUDE%;%SDKDIR%include
     )
 )
 
 cd "%USERPROFILE%"
-%MOZILLABUILD%\msys\bin\bash --login -i
+"%MOZILLABUILD%\msys\bin\bash" --login -i

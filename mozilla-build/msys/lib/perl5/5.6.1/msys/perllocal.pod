@@ -1,4 +1,4 @@
-=head2 Mon Jun 16 10:42:46 2008: C<Module> L<MIME::Base64|MIME::Base64>
+=head2 Tue Jul  7 12:55:54 2009: C<Module> L<MIME::Base64|MIME::Base64>
 
 =over 4
 
@@ -20,7 +20,7 @@ C<EXE_FILES: >
 
 =back
 
-=head2 Mon Jun 16 10:42:51 2008: C<Module> L<Time::HiRes|Time::HiRes>
+=head2 Tue Jul  7 12:55:59 2009: C<Module> L<Time::HiRes|Time::HiRes>
 
 =over 4
 
