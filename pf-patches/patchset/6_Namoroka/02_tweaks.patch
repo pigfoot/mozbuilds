@@ -1,0 +1,22 @@
+--- mozilla/browser/app/profile/firefox.js.BAK  Wed Apr 22 14:44:30 2009
++++ mozilla/browser/app/profile/firefox.js      Wed Apr 22 14:54:13 2009
+@@ -916,3 +916,19 @@
+ pref("browser.taskbar.previews.cachetime", 20);
+ #endif
+ #endif
++
++// pigfoot's tweaks
++pref("general.useragent.extra.pigfoot", "(pigfoot,__pigfoot_useragent_arch__)");
++//pref("app.update.url", "https://update.pigfoot.org/__pigfoot_arch__/2/%PRODUCT%/%VERSION%/%BUILD_ID%/%BUILD_TARGET%/%LOCALE%/%CHANNEL%/%OS_VERSION%/update.xml");
++pref("browser.enable_automatic_image_resizing", false);
++pref("network.http.max-connections", 48);
++pref("network.http.max-connections-per-server", 16);
++pref("network.http.max-persistent-connections-per-proxy", 16);
++pref("network.http.max-persistent-connections-per-server", 8);
++pref("network.http.pipelining", true);
++pref("network.http.proxy.pipelining", true);
++pref("network.http.pipelining.maxrequests", 8);
++pref("plugin.expose_full_path", true);
++//pref("signed.applets.codebase_principal_support", true);
++pref("config.trim_on_minimize", true);
++pref("extensions.checkCompatibility.3.6", false);  // Bug521905
