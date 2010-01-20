@@ -10,16 +10,19 @@ SET MOZILLABUILD=%MOZBUILDDIR%\
 echo "Mozilla tools directory: %MOZBUILDDIR%\"
 
 REM Get MSVC paths
-set SDKDIR=C:\Program Files\Microsoft SDKs\Windows\v6.1
-set SDKVER=6
-set SDKMINORVER=1
-set VC9DIR=C:\Program Files\Microsoft Visual Studio 9.0\VC
+REM set SDKDIR=C:\Program Files\Microsoft SDKs\Windows\v6.1
+REM set SDKVER=6
+REM set SDKMINORVER=1
+set SDKDIR=C:\Program Files\Microsoft SDKs\Windows\v7.0
+set SDKVER=7
+set SDKMINORVER=0
+set VC9DIR=C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC
 
 REM Use the moztools-static
 set MOZ_TOOLS=%MOZBUILDDIR%\moztools
 
 rem append moztools to PATH
-SET PATH=%PATH%;%MOZ_TOOLS%\bin
+SET PATH=%PATH%;%MOZ_TOOLS%\bin;%MOZBUILDPFPATCHDIR%\toolkit
 
 call "%VC9DIR%\Bin\vcvars32.bat"
 

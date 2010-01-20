@@ -11,7 +11,7 @@ The first step is to install it from here:
   The Git Guides also detail our recommended setup for your local repository:
 
     * Clone of the official repository
-	  git://github.com/pigfoot/mozbuilds.git
+      git://github.com/pigfoot/mozbuilds.git
 
 === Git steps
 
@@ -30,5 +30,4 @@ Then make a local Git branch for yourself:
   $ git checkout -b <local_branch>
 
 where you should replace <local_branch> with the name of your choice (without angle brackets!).  
-
 

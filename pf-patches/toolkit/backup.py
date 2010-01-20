@@ -23,8 +23,6 @@ mozilla/mail/app/profile/all-thunderbird.js
 mozilla/other-licenses/branding/firefox/firefox.ico
 mozilla/other-licenses/branding/firefox/content/about.png
 mozilla/other-licenses/branding/firefox/content/aboutCredits.png
-mozilla/browser/locales/en-US/chrome/branding/brand.dtd
-mozilla/browser/locales/en-US/chrome/branding/brand.properties
 mozilla/other-licenses/branding/firefox/locales/en-US/brand.dtd
 mozilla/other-licenses/branding/firefox/locales/en-US/brand.properties
 
@@ -38,6 +36,8 @@ mozilla/toolkit/mozapps/update/src/updater/Makefile.in
 ## manifest
 mozilla/toolkit/mozapps/update/src/updater/updater.exe.manifest
 mozilla/toolkit/crashreporter/client/crashreporter.exe.manifest
+mozilla/build/wince/tools/Makefile
+mozilla/build/automationutils.py
 
 ## jemalloc
 mozilla/memory/jemalloc/Makefile.in

@@ -33,6 +33,10 @@ class MozBuilder:
         self.MinefieldPatchSet = [
         ]
 
+        self.NamorokaPatchSet = [
+            '02_tweaks.patch'
+        ]
+
         self.ShiretokoPatchSet = [
             '02_tweaks.patch'
         ]
@@ -58,8 +62,9 @@ class MozBuilder:
 
         self.aDictBranch = { \
             'Minefield'     : { 'Ver' : 'Trunk',            'PatchPath': '../pf-patches/patchset/0_Minefield/',    'PatchSet' : self.MinefieldPatchSet    },
-            'Shiretoko'     : { 'Ver' : '3.5.2-Release',    'PatchPath': '../pf-patches/patchset/5_Shiretoko/',    'PatchSet' : self.ShiretokoPatchSet    },
-            'GranParadiso'  : { 'Ver' : '3.0.13-Release',   'PatchPath': '../pf-patches/patchset/4_GranParadiso/', 'PatchSet' : self.GranParadisoPatchSet },
+            'Namoroka'      : { 'Ver' : '3.6rc2',         'PatchPath': '../pf-patches/patchset/6_Namoroka/',     'PatchSet' : self.NamorokaPatchSet    },
+            'Shiretoko'     : { 'Ver' : '3.5.7-Release',    'PatchPath': '../pf-patches/patchset/5_Shiretoko/',    'PatchSet' : self.ShiretokoPatchSet    },
+            'GranParadiso'  : { 'Ver' : '3.0.14-Release',   'PatchPath': '../pf-patches/patchset/4_GranParadiso/', 'PatchSet' : self.GranParadisoPatchSet },
             'BonEcho'       : { 'Ver' : '2.0.0.16-Release', 'PatchPath': '../pf-patches/patchset/3_BonEcho/',      'PatchSet' : self.BonEchoPatchSet      },
         }
 
@@ -93,10 +98,11 @@ class MozBuilder:
 
     def preInst(self):
 
-        szProject     = self.szProject
-        szArch        = self.aDictArch[self.szArch]['Tag']
-        szLocale      = self.szLocale
-        szUpdaterArch = self.szArch
+        szProject       = self.szProject
+        szArch          = self.aDictArch[self.szArch]['Tag']
+        szLocale        = self.szLocale
+        szUpdaterArch   = self.szArch
+        szUserAgentArch = self.szArch.upper()
 
         if (self.bBranding):
             szUpdaterArch = 'f' + szUpdaterArch[1:]
@@ -105,9 +111,10 @@ class MozBuilder:
         self.system('python ../pf-patches/toolkit/backup.py restore')
 
         # CRT
-        if (os.environ["MOZ_MSVCVERSION"] == '9'):
-            self.system('patch -p0 < ../pf-patches/patchset/mozcrt19_diff_for_vc9sp1_rev1/jemalloc.vc9sp1.patch')
-            self.system('cp -f ../pf-patches/patchset/mozcrt19_diff_for_vc9sp1_rev1/crtvc9sp1.diff mozilla/memory/jemalloc/')
+        if (os.environ["MOZ_MSVCVERSION"] == '9') and (self.szBranch == 'Shiretoko' or self.szBranch == 'GranParadiso'):
+            _Path = self.aDictBranch[self.szBranch]["PatchPath"] + '/mozcrt19_diff_for_vc9sp1_rev1/'
+            self.system('patch -p0 < %s' % (_Path + 'jemalloc.vc9sp1.patch'))
+            self.system('cp -f %s mozilla/memory/jemalloc/' % (_Path + 'crtvc9sp1.diff'))
 
         # Change icon if not official branding
         if (not self.bBranding):
@@ -129,8 +136,13 @@ class MozBuilder:
         self.system('python ../pf-patches/toolkit/mozconfig-generator.py %s %s %s %s > mozilla/.mozconfig' % (szProject, szArch, szLocale, self.szUpdateChannel))
 
         # Replace updater URL
-        self.system('sed "s#__pigfoot_arch__#' + szUpdaterArch + '#" < ' + os.path.join('mozilla', 'browser', 'app', 'profile', 'firefox.js') + ' > ' + os.path.join('mozilla', 'browser', 'app', 'profile', 'firefox.js.tmp'))
-        self.system('sed "s#\\n##g" < ' + os.path.join('mozilla', 'browser', 'app', 'profile', 'firefox.js.tmp') + ' > ' + os.path.join('mozilla', 'browser', 'app', 'profile', 'firefox.js'))
+        self.system('sed "s#__pigfoot_useragent_arch__#' + szUserAgentArch + '#" < ' + os.path.join('mozilla', 'browser', 'app', 'profile', 'firefox.js') + ' > ' + os.path.join('mozilla', 'browser', 'app', 'profile', 'firefox.js.tmp1'))
+
+        # Replace updater URL
+        self.system('sed "s#__pigfoot_arch__#' + szUpdaterArch + '#" < ' + os.path.join('mozilla', 'browser', 'app', 'profile', 'firefox.js.tmp1') + ' > ' + os.path.join('mozilla', 'browser', 'app', 'profile', 'firefox.js.tmp2'))
+        self.system('sed "s#\\n##g" < ' + os.path.join('mozilla', 'browser', 'app', 'profile', 'firefox.js.tmp2') + ' > ' + os.path.join('mozilla', 'browser', 'app', 'profile', 'firefox.js'))
+        self.system('rm -f ' + os.path.join('mozilla', 'browser', 'app', 'profile', 'firefox.js.tmp1'))
+        self.system('rm -f ' + os.path.join('mozilla', 'browser', 'app', 'profile', 'firefox.js.tmp2'))
 
         return True
 
@@ -211,11 +223,11 @@ class MozBuilder:
         szArch    = self.aDictArch[self.szArch]['Ver']
         szLocale  = self.szLocale
 
-        # Compose archiver name
-        szArchiveFile  = '%s-%s-CE-%s (pigfoot) %s-%s.7z.exe' % (self.szProjectFull, szTime, szVer, szArch, szLocale)
+        # Compose archiver name, AppEngine cannot support space and bracket
+        szArchiveFile  = '%s-%s-CE-%s-pigfoot-%s-%s.7z.exe' % (self.szProjectFull, szTime, szVer, szArch, szLocale)
         szMarFile      = szArchiveFile[:-7] + '.mar'
         szLogFile      = szArchiveFile[:-7] + '.log'
-        szPortableFile = szArchiveFile[:-7] + '.7z'
+        szPortableFile = szArchiveFile[:-7] + '-Portable.7z.exe'
 
         # Build update-packaging
         self.system('make -C mozilla/other-licenses/bsdiff')
@@ -235,7 +247,7 @@ class MozBuilder:
 
         os.chdir('mozilla/dist')
         shutil.copy2(os.path.join('..', '..', '..', 'pf-patches', 'toolkit', 'FirefoxLoader.exe'), 'FirefoxLoader.exe')
-        self.system('7z a "%s" -mx9 -mmt -r FirefoxLoader.exe %s/*' % ('../../' + szPortableFile, self.szProjectFull))
+        self.system('7z a "%s" -mx9 -mmt -sfx7z.sfx -r FirefoxLoader.exe %s/*' % ('../../' + szPortableFile, self.szProjectFull))
         os.remove('FirefoxLoader.exe')
         os.chdir('../..')
 

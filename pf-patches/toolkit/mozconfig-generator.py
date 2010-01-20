@@ -216,6 +216,7 @@ ac_add_options --with-l10n-base=../l10n"""
 ## Official branding
 ##"""
         print 'ac_add_options --enable-official-branding'
+        print '#ac_add_options --with-windows-version=502'
 
         print """
 ##
