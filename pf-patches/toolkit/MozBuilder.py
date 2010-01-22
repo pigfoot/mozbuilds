@@ -62,7 +62,7 @@ class MozBuilder:
 
         self.aDictBranch = { \
             'Minefield'     : { 'Ver' : 'Trunk',            'PatchPath': '../pf-patches/patchset/0_Minefield/',    'PatchSet' : self.MinefieldPatchSet    },
-            'Namoroka'      : { 'Ver' : '3.6rc2',         'PatchPath': '../pf-patches/patchset/6_Namoroka/',     'PatchSet' : self.NamorokaPatchSet    },
+            'Namoroka'      : { 'Ver' : '3.6-Release',      'PatchPath': '../pf-patches/patchset/6_Namoroka/',     'PatchSet' : self.NamorokaPatchSet    },
             'Shiretoko'     : { 'Ver' : '3.5.7-Release',    'PatchPath': '../pf-patches/patchset/5_Shiretoko/',    'PatchSet' : self.ShiretokoPatchSet    },
             'GranParadiso'  : { 'Ver' : '3.0.14-Release',   'PatchPath': '../pf-patches/patchset/4_GranParadiso/', 'PatchSet' : self.GranParadisoPatchSet },
             'BonEcho'       : { 'Ver' : '2.0.0.16-Release', 'PatchPath': '../pf-patches/patchset/3_BonEcho/',      'PatchSet' : self.BonEchoPatchSet      },
@@ -120,12 +120,18 @@ class MozBuilder:
         if (not self.bBranding):
             shutil.copy(os.path.join('..', 'pf-patches', 'branding', 'firefox2005_icon_ico.ico'), os.path.join('mozilla', 'other-licenses', 'branding', 'firefox', 'firefox.ico'))
             shutil.copy(os.path.join('..', 'pf-patches', 'branding', 'firefox2005_icon_png.png'), os.path.join('mozilla', 'other-licenses', 'branding', 'firefox', 'content', 'about.png'))
-            shutil.copy(os.path.join('mozilla', 'browser', 'base', 'branding', 'aboutCredits.png'), os.path.join('mozilla', 'other-licenses', 'branding', 'firefox', 'content', 'aboutCredits.png'))
+            if (self.szBranch == 'Shiretoko' or self.szBranch == 'GranParadiso'):
+                shutil.copy(os.path.join('mozilla', 'browser', 'base', 'branding', 'aboutCredits.png'), os.path.join('mozilla', 'other-licenses', 'branding', 'firefox', 'content', 'aboutCredits.png'))
+            else:
+                shutil.copy(os.path.join('mozilla', 'browser', 'branding', 'unofficial', 'content', 'aboutCredits.png'), os.path.join('mozilla', 'other-licenses', 'branding', 'firefox', 'content', 'aboutCredits.png'))
 
         if (szLocale == 'en_US'):
             self.aDictBranch[self.szBranch]["PatchSet"].append('90_branding.patch')
         else:
             self.aDictBranch[self.szBranch]["PatchSet"].append('91_branding_locale.patch')
+
+        # Durty patch to perform dos2unix forcely.
+        self.system('tr -d \'\\r\' < %s > %s' % ('l10n/it/other-licenses/branding/firefox/brand.dtd.BAK', 'l10n/it/other-licenses/branding/firefox/brand.dtd'))
 
         for patch in self.aDictBranch[self.szBranch]["PatchSet"]:
             self.system('patch -p0 < %s' % self.aDictBranch[self.szBranch]["PatchPath"] + patch)
@@ -270,7 +276,7 @@ class MozBuilder:
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 def usage(szProg):
-    print ('Usage: %s <project> <branch> <arch> [en_US|zh_TW|zh_CN|ja|de|nl|hu] [no-branding|branding] [release|nightly] [private|public]\n' % szProg)
+    print ('Usage: %s <project> <branch> <arch> [en_US|zh_TW|zh_CN|ja|de|nl|hu|it|ru] [no-branding|branding] [release|nightly] [private|public]\n' % szProg)
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 

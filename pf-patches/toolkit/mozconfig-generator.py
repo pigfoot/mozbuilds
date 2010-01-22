@@ -38,6 +38,8 @@ class MozGenerator:
         # locale = 6        -> hu
         # locale = 7        -> nl (dutch)
         # locale = 8        -> fr (dutch)
+        # locale = 9        -> it
+        # locale = 10       -> ru
         #
         # nightly = 0       -> uninit
         # nightly = 1       -> nightly
@@ -90,8 +92,12 @@ class MozGenerator:
             self.mozlocale=7
         elif _mozlocale == 'fr':
             self.mozlocale=8
+        elif _mozlocale == 'it':
+            self.mozlocale=9
+        elif _mozlocale == 'ru':
+            self.mozlocale=10
         else:
-            print ('<locale> must be en_US, zh_TW, zh_CN, ja, de, hu, nl or fr!')
+            print ('<locale> must be en_US, zh_TW, zh_CN, ja, de, hu, nl, fr, it or ru!')
             sys.exit(0)
 
         if _nightly == 'nightly':
@@ -154,6 +160,8 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=hu'
             print '#ac_add_options --enable-ui-locale=nl'
             print '#ac_add_options --enable-ui-locale=fr'
+            print '#ac_add_options --enable-ui-locale=it'
+            print '#ac_add_options --enable-ui-locale=ru'
         elif (self.mozlocale == 2):
             print 'ac_add_options --enable-ui-locale=zh-TW'
             print '#ac_add_options --enable-ui-locale=zh-CN'
@@ -162,6 +170,8 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=hu'
             print '#ac_add_options --enable-ui-locale=nl'
             print '#ac_add_options --enable-ui-locale=fr'
+            print '#ac_add_options --enable-ui-locale=it'
+            print '#ac_add_options --enable-ui-locale=ru'
         elif (self.mozlocale == 3):
             print '#ac_add_options --enable-ui-locale=zh-TW'
             print 'ac_add_options --enable-ui-locale=zh-CN'
@@ -170,6 +180,8 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=hu'
             print '#ac_add_options --enable-ui-locale=nl'
             print '#ac_add_options --enable-ui-locale=fr'
+            print '#ac_add_options --enable-ui-locale=it'
+            print '#ac_add_options --enable-ui-locale=ru'
         elif (self.mozlocale == 4):
             print '#ac_add_options --enable-ui-locale=zh-TW'
             print '#ac_add_options --enable-ui-locale=zh-CN'
@@ -178,6 +190,8 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=hu'
             print '#ac_add_options --enable-ui-locale=nl'
             print '#ac_add_options --enable-ui-locale=fr'
+            print '#ac_add_options --enable-ui-locale=it'
+            print '#ac_add_options --enable-ui-locale=ru'
         elif (self.mozlocale == 5):
             print '#ac_add_options --enable-ui-locale=zh-TW'
             print '#ac_add_options --enable-ui-locale=zh-CN'
@@ -186,6 +200,8 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=hu'
             print '#ac_add_options --enable-ui-locale=nl'
             print '#ac_add_options --enable-ui-locale=fr'
+            print '#ac_add_options --enable-ui-locale=it'
+            print '#ac_add_options --enable-ui-locale=ru'
         elif (self.mozlocale == 6):
             print '#ac_add_options --enable-ui-locale=zh-TW'
             print '#ac_add_options --enable-ui-locale=zh-CN'
@@ -194,6 +210,8 @@ ac_add_options --with-l10n-base=../l10n"""
             print 'ac_add_options --enable-ui-locale=hu'
             print '#ac_add_options --enable-ui-locale=nl'
             print '#ac_add_options --enable-ui-locale=fr'
+            print '#ac_add_options --enable-ui-locale=it'
+            print '#ac_add_options --enable-ui-locale=ru'
         elif (self.mozlocale == 7):
             print '#ac_add_options --enable-ui-locale=zh-TW'
             print '#ac_add_options --enable-ui-locale=zh-CN'
@@ -202,6 +220,8 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=hu'
             print 'ac_add_options --enable-ui-locale=nl'
             print '#ac_add_options --enable-ui-locale=fr'
+            print '#ac_add_options --enable-ui-locale=it'
+            print '#ac_add_options --enable-ui-locale=ru'
         elif (self.mozlocale == 8):
             print '#ac_add_options --enable-ui-locale=zh-TW'
             print '#ac_add_options --enable-ui-locale=zh-CN'
@@ -210,6 +230,28 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=hu'
             print '#ac_add_options --enable-ui-locale=nl'
             print 'ac_add_options --enable-ui-locale=fr'
+            print '#ac_add_options --enable-ui-locale=it'
+            print '#ac_add_options --enable-ui-locale=ru'
+        elif (self.mozlocale == 9):
+            print '#ac_add_options --enable-ui-locale=zh-TW'
+            print '#ac_add_options --enable-ui-locale=zh-CN'
+            print '#ac_add_options --enable-ui-locale=ja'
+            print '#ac_add_options --enable-ui-locale=de'
+            print '#ac_add_options --enable-ui-locale=hu'
+            print '#ac_add_options --enable-ui-locale=nl'
+            print '#ac_add_options --enable-ui-locale=fr'
+            print 'ac_add_options --enable-ui-locale=it'
+            print '#ac_add_options --enable-ui-locale=ru'
+        elif (self.mozlocale == 10):
+            print '#ac_add_options --enable-ui-locale=zh-TW'
+            print '#ac_add_options --enable-ui-locale=zh-CN'
+            print '#ac_add_options --enable-ui-locale=ja'
+            print '#ac_add_options --enable-ui-locale=de'
+            print '#ac_add_options --enable-ui-locale=hu'
+            print '#ac_add_options --enable-ui-locale=nl'
+            print '#ac_add_options --enable-ui-locale=fr'
+            print '#ac_add_options --enable-ui-locale=it'
+            print 'ac_add_options --enable-ui-locale=ru'
 
         print """
 ##

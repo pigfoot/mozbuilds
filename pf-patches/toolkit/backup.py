@@ -43,6 +43,7 @@ mozilla/build/automationutils.py
 mozilla/memory/jemalloc/Makefile.in
 
 ## l10n
+
 l10n/fr/other-licenses/branding/firefox/brand.dtd
 l10n/fr/other-licenses/branding/firefox/brand.properties
 l10n/de/other-licenses/branding/firefox/brand.dtd
@@ -53,6 +54,10 @@ l10n/zh-CN/other-licenses/branding/firefox/brand.dtd
 l10n/zh-CN/other-licenses/branding/firefox/brand.properties
 l10n/zh-TW/other-licenses/branding/firefox/brand.dtd
 l10n/zh-TW/other-licenses/branding/firefox/brand.properties
+l10n/it/other-licenses/branding/firefox/brand.dtd
+l10n/it/other-licenses/branding/firefox/brand.properties
+l10n/ru/other-licenses/branding/firefox/brand.dtd
+l10n/ru/other-licenses/branding/firefox/brand.properties
 """
 
 import os

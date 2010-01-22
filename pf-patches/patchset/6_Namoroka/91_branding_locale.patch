@@ -78,3 +78,36 @@
  vendorShortName=Mozilla
  
  homePageSingleStartMain=Firefox Start，結合快速搜尋的首頁
+--- l10n/it/other-licenses/branding/firefox/brand.dtd.BAK	2010-01-22 18:31:29 +0800
++++ l10n/it/other-licenses/branding/firefox/brand.dtd	2010-01-22 19:41:47 +0800
+ <!ENTITY brandShortName "Firefox">
+-<!ENTITY brandFullName "Mozilla Firefox">
++<!ENTITY brandFullName "Firefox">
+ <!ENTITY vendorShortName "Mozilla">
+ <!ENTITY logoCopyright "Firefox e i logo di Firefox sono marchi registrati della Mozilla Foundation. Tutti i diritti riservati.">
+--- l10n/it/other-licenses/branding/firefox/brand.properties.BAK	2010-01-22 18:25:00 +0800
++++ l10n/it/other-licenses/branding/firefox/brand.properties	2010-01-22 18:31:40 +0800
+@@ -1,5 +1,5 @@
+ brandShortName = Firefox
+-brandFullName = Mozilla Firefox
++brandFullName = Firefox
+ vendorShortName = Mozilla
+ homePageSingleStartMain = Pagina iniziale di Firefox, leggera e con ricerca integrata
+ homePageImport = Importa la pagina iniziale da %S
+--- l10n/ru/other-licenses/branding/firefox/brand.dtd.BAK	2010-01-22 18:25:30 +0800
++++ l10n/ru/other-licenses/branding/firefox/brand.dtd	2010-01-22 18:32:52 +0800
+@@ -1,4 +1,4 @@
+ <!ENTITY brandShortName "Firefox">
+-<!ENTITY brandFullName "Mozilla Firefox">
++<!ENTITY brandFullName "Firefox">
+ <!ENTITY vendorShortName "Mozilla">
+ <!ENTITY logoCopyright "Firefox и логотипы Firefox являются торговыми марками Mozilla Foundation. Все права защищены.">
+--- l10n/ru/other-licenses/branding/firefox/brand.properties.BAK	2010-01-22 18:25:30 +0800
++++ l10n/ru/other-licenses/branding/firefox/brand.properties	2010-01-22 18:32:48 +0800
+@@ -1,5 +1,5 @@
+ brandShortName = Firefox
+-brandFullName = Mozilla Firefox
++brandFullName = Firefox
+ vendorShortName = Mozilla
+ homePageSingleStartMain = Начальная страница Firefox — быстрая, со встроенным поиском
+ homePageImport = Импортировать домашнюю страницу из %S

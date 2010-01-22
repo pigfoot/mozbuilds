@@ -1,7 +1,7 @@
 #!/bin/bash -v
 
-TAG='FIREFOX_3_5_7_RELEASE'
-LOCALES='zh-TW zh-CN ja de fr'
+TAG='FIREFOX_3_6_RELEASE'
+LOCALES='zh-TW zh-CN ja de fr it ru'
 
 #FILENAME='TRUNK-source.tar.bz2'
 #FILENAME='FIREFOX_3_0_14_RELEASE-source.tar.bz2'
@@ -16,10 +16,10 @@ LOCALES='zh-TW zh-CN ja de fr'
 #hg clone http://hg.mozilla.org/releases/mozilla-1.9.1 mozilla
 
 #rm -rf l10n ; mkdir l10n ; cd l10n
-#for ${loc} in $(LOCALES}; do
-#hg clone http://hg.mozilla.org/releases/l10n-mozilla-1.9.1/${loc}
+#for loc in ${LOCALES}; do
+#hg clone http://hg.mozilla.org/releases/l10n-mozilla-1.9.2/${loc}
 #done
-#cd ..
+#cd -
 
 #cd mozilla
 #hg update ${TAG}

@@ -10,13 +10,7 @@ SET MOZILLABUILD=%MOZBUILDDIR%\
 echo "Mozilla tools directory: %MOZBUILDDIR%\"
 
 REM Get MSVC paths
-REM set SDKDIR=C:\Program Files\Microsoft SDKs\Windows\v6.1
-REM set SDKVER=6
-REM set SDKMINORVER=1
-set SDKDIR=C:\Program Files\Microsoft SDKs\Windows\v7.0
-set SDKVER=7
-set SDKMINORVER=0
-set VC9DIR=C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC
+call "%MOZBUILDDIR%\guess-msvc.bat"
 
 REM Use the moztools-static
 set MOZ_TOOLS=%MOZBUILDDIR%\moztools
@@ -29,10 +23,10 @@ call "%VC9DIR%\Bin\vcvars32.bat"
 set PATH=%SDKDIR%\bin;%PATH%
 set LIB=%SDKDIR%\lib;%LIB%;%MOZBUILDDIR\%atlthunk_compat
 
-REM Microsoft SDK 6.1
+REM Microsoft SDK 7.0
 set INCLUDE=%SDKDIR%\include;%SDKDIR%\include\atl;%INCLUDE%
 
-SET PATH=%PATH%;%MOZILLABUILD%msys\bin;%MOZILLABUILD%msys\local\bin;%MOZILLABUILD%python25;%MOZILLABUILD%info-zip
+SET PATH=%PATH%;%MOZILLABUILD%msys\bin;%MOZILLABUILD%msys\local\bin
 
 set HOME=%MOZBUILDHOMEDIR%
 %MOZILLABUILD%\msys\bin\bash --login -i
