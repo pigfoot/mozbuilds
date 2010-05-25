@@ -1,6 +1,6 @@
 --- mozilla/browser/app/profile/firefox.js.BAK  Wed Apr 22 14:44:30 2009
 +++ mozilla/browser/app/profile/firefox.js      Wed Apr 22 14:54:13 2009
-@@ -844,3 +844,18 @@
+@@ -844,3 +844,25 @@
  // base url for the wifi geolocation network provider
  pref("geo.wifi.uri", "https://www.google.com/loc/json");
 
@@ -19,3 +19,10 @@
 +//pref("signed.applets.codebase_principal_support", true);
 +pref("config.trim_on_minimize", true);
 +pref("extensions.checkCompatibility", false);  // Bug330895
++
++//http://www.junauza.com/2010/05/hacks-to-make-firefox-faster-than.html
++pref("nglayout.initialpaint.delay", 0);
++pref("content.notify.interval", 500000);
++pref("content.notify.ontimer", true);
++pref("content.switch.threshold", 250000);
++pref("content.interrupt.parsing", false);
