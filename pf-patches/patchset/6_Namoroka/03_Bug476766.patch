@@ -1,6 +1,6 @@
 --- mozilla/security/nss/lib/ckfw/builtins/certdata.c
 +++ mozilla/security/nss/lib/ckfw/builtins/certdata.c
-@@ -4604,19 +4604,19 @@ static const NSSItem nss_builtins_items_
+@@ -4640,19 +4640,19 @@ static const NSSItem nss_builtins_items_
  "\145\164\040\114\151\155\151\164\145\144\061\072\060\070\006\003"
  "\125\004\003\023\061\105\156\164\162\165\163\164\056\156\145\164"
  "\040\123\145\143\165\162\145\040\123\145\162\166\145\162\040\103"
@@ -23,7 +23,7 @@
    { (void *)&ck_false, (PRUint32)sizeof(CK_BBOOL) },
    { (void *)&ck_false, (PRUint32)sizeof(CK_BBOOL) },
    { (void *)"Entrust.net Secure Personal CA", (PRUint32)31 },
-@@ -19899,17 +19899,17 @@ static const NSSItem nss_builtins_items_
+@@ -19935,17 +19935,17 @@ static const NSSItem nss_builtins_items_
  , (PRUint32)16 },
    { (void *)"\060\062\061\013\060\011\006\003\125\004\006\023\002\103\116\061"
  "\016\060\014\006\003\125\004\012\023\005\103\116\116\111\103\061"
