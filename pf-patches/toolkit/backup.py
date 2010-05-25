@@ -42,8 +42,11 @@ mozilla/build/automationutils.py
 ## jemalloc
 mozilla/memory/jemalloc/Makefile.in
 
-## l10n
+## For Bug476766
+mozilla/security/nss/lib/ckfw/builtins/certdata.c
+mozilla/security/nss/lib/ckfw/builtins/certdata.txt
 
+## l10n
 l10n/fr/other-licenses/branding/firefox/brand.dtd
 l10n/fr/other-licenses/branding/firefox/brand.properties
 l10n/de/other-licenses/branding/firefox/brand.dtd
