@@ -127,25 +127,25 @@ mk_add_options 'PROFILE_GEN_SCRIPT=$(PYTHON) $(OBJDIR)/_profile/pgo/profileserve
 ## CPU Optimization
 ##"""
         if (self.arch == 0):
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
-            print 'ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE2 -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
+            print '#ac_add_options --enable-optimize="-Ox -GLAs -fp:fast -GS-"'
+            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS-"'
+            print 'ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS-"'
+            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE2 -fp:fast -GS-"'
         elif (self.arch == 1):
-            print 'ac_add_options --enable-optimize="-Ox -GLAs -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE2 -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
+            print 'ac_add_options --enable-optimize="-Ox -GLAs -fp:fast -GS-"'
+            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS-"'
+            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS-"'
+            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE2 -fp:fast -GS-"'
         elif (self.arch == 2):
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
-            print 'ac_add_options --enable-optimize="-O2 -GLAs -arch:SSE -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE2 -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
+            print '#ac_add_options --enable-optimize="-Ox -GLAs -fp:fast -GS-"'
+            print 'ac_add_options --enable-optimize="-O2 -GLAs -arch:SSE -fp:fast -GS-"'
+            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS-"'
+            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE2 -fp:fast -GS-"'
         elif (self.arch == 3):
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
-            print 'ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE2 -fp:fast -GS- -D_CRT_NOFORCE_MANIFEST -D_STL_NOFORCE_MANIFEST -D_STATIC_CPPLIB"'
+            print '#ac_add_options --enable-optimize="-Ox -GLAs -fp:fast -GS-"'
+            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS-"'
+            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS-"'
+            print 'ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE2 -fp:fast -GS-"'
 
         print """
 #
