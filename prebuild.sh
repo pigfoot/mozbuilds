@@ -33,6 +33,8 @@ fi
 
 echo "cd mozilla"
 cd mozilla
+echo "hg pull"
+hg pull
 echo "hg update ${TAG}"
 hg update ${TAG}
 echo "cd -"
@@ -43,6 +45,8 @@ cd l10n
 for loc in ${LOCALES}; do
 echo "cd ${loc}"
 cd ${loc}
+echo "hg pull"
+hg pull
 echo "hg update ${TAG}"
 hg update ${TAG}
 echo "cd -"
