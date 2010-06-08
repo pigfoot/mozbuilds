@@ -11,3 +11,14 @@
 +    print "SourceStamp=%s" % _sourcestamp
  if options.sourcerepo:
      print "SourceRepository=%s" % options.sourcerepo
+--- mozilla/toolkit/content/Makefile.in.BAK	2009-11-12 11:51:47 +0800
++++ mozilla/toolkit/content/Makefile.in	2010-06-25 15:49:57 +0800
+@@ -58,7 +58,7 @@
+   -DCPPFLAGS="$(CPPFLAGS)" \
+   $(NULL)
+ 
+-CHANGESET := $(shell cd $(topsrcdir) && hg identify 2>/dev/null | cut -f1 -d' ')
++CHANGESET := $(shell cd $(topsrcdir) && hg identify 2>/dev/null | cut -f1 -d' ' | tr -d '+')
+ ifdef CHANGESET
+ DEFINES += -DSOURCE_CHANGESET="$(CHANGESET)"
+ endif
