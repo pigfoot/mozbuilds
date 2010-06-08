@@ -64,6 +64,7 @@ l10n/ru/other-licenses/branding/firefox/brand.properties
 
 ## Misc
 mozilla/browser/locales/en-US/searchplugins/google.xml
+mozilla/toolkit/xre/make-platformini.py
 
 """
 

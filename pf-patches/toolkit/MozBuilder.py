@@ -36,7 +36,8 @@ class MozBuilder:
         self.NamorokaPatchSet = [
             '01_google-ssl.patch',
             '02_tweaks.patch',
-            '03_Bug476766.patch'
+            '03_Bug476766.patch',
+            '04_correct_hg_rev.patch'
         ]
 
         self.ShiretokoPatchSet = [
@@ -64,7 +65,7 @@ class MozBuilder:
 
         self.aDictBranch = { \
             'Minefield'     : { 'Ver' : 'Trunk',            'PatchPath': '../pf-patches/patchset/0_Minefield/',    'PatchSet' : self.MinefieldPatchSet    },
-            'Namoroka'      : { 'Ver' : '3.6.4b5',          'PatchPath': '../pf-patches/patchset/6_Namoroka/',     'PatchSet' : self.NamorokaPatchSet     },
+            'Namoroka'      : { 'Ver' : '3.6.4b6',          'PatchPath': '../pf-patches/patchset/6_Namoroka/',     'PatchSet' : self.NamorokaPatchSet     },
             'Shiretoko'     : { 'Ver' : '3.5.7-Release',    'PatchPath': '../pf-patches/patchset/5_Shiretoko/',    'PatchSet' : self.ShiretokoPatchSet    },
             'GranParadiso'  : { 'Ver' : '3.0.14-Release',   'PatchPath': '../pf-patches/patchset/4_GranParadiso/', 'PatchSet' : self.GranParadisoPatchSet },
             'BonEcho'       : { 'Ver' : '2.0.0.16-Release', 'PatchPath': '../pf-patches/patchset/3_BonEcho/',      'PatchSet' : self.BonEchoPatchSet      },

@@ -1,0 +1,13 @@
+--- mozilla/toolkit/xre/make-platformini.py.BAK	2010-06-08 13:49:02 +0800
++++ mozilla/toolkit/xre/make-platformini.py	2010-06-08 13:54:15 +0800
+@@ -36,6 +36,9 @@
+ BuildID=%s
+ Milestone=%s""" % (options.buildid, milestone)
+ if options.sourcestamp:
+-    print "SourceStamp=%s" % options.sourcestamp
++    _sourcestamp = options.sourcestamp
++    if _sourcestamp[-1] == '+':
++        _sourcestamp = _sourcestamp[:-1]
++    print "SourceStamp=%s" % _sourcestamp
+ if options.sourcerepo:
+     print "SourceRepository=%s" % options.sourcerepo
