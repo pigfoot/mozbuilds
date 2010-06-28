@@ -40,6 +40,7 @@ class MozGenerator:
         # locale = 8        -> fr (dutch)
         # locale = 9        -> it
         # locale = 10       -> ru
+        # locale = 11       -> sl
         #
         # nightly = 0       -> uninit
         # nightly = 1       -> nightly
@@ -96,8 +97,10 @@ class MozGenerator:
             self.mozlocale=9
         elif _mozlocale == 'ru':
             self.mozlocale=10
+        elif _mozlocale == 'sl':
+            self.mozlocale=11
         else:
-            print ('<locale> must be en_US, zh_TW, zh_CN, ja, de, hu, nl, fr, it or ru!')
+            print ('<locale> must be en_US, zh_TW, zh_CN, ja, de, hu, nl, fr, it ru or sl!')
             sys.exit(0)
 
         if _nightly == 'nightly':
@@ -162,6 +165,7 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=fr'
             print '#ac_add_options --enable-ui-locale=it'
             print '#ac_add_options --enable-ui-locale=ru'
+            print '#ac_add_options --enable-ui-locale=sl'
         elif (self.mozlocale == 2):
             print 'ac_add_options --enable-ui-locale=zh-TW'
             print '#ac_add_options --enable-ui-locale=zh-CN'
@@ -172,6 +176,7 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=fr'
             print '#ac_add_options --enable-ui-locale=it'
             print '#ac_add_options --enable-ui-locale=ru'
+            print '#ac_add_options --enable-ui-locale=sl'
         elif (self.mozlocale == 3):
             print '#ac_add_options --enable-ui-locale=zh-TW'
             print 'ac_add_options --enable-ui-locale=zh-CN'
@@ -182,6 +187,7 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=fr'
             print '#ac_add_options --enable-ui-locale=it'
             print '#ac_add_options --enable-ui-locale=ru'
+            print '#ac_add_options --enable-ui-locale=sl'
         elif (self.mozlocale == 4):
             print '#ac_add_options --enable-ui-locale=zh-TW'
             print '#ac_add_options --enable-ui-locale=zh-CN'
@@ -192,6 +198,7 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=fr'
             print '#ac_add_options --enable-ui-locale=it'
             print '#ac_add_options --enable-ui-locale=ru'
+            print '#ac_add_options --enable-ui-locale=sl'
         elif (self.mozlocale == 5):
             print '#ac_add_options --enable-ui-locale=zh-TW'
             print '#ac_add_options --enable-ui-locale=zh-CN'
@@ -202,6 +209,7 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=fr'
             print '#ac_add_options --enable-ui-locale=it'
             print '#ac_add_options --enable-ui-locale=ru'
+            print '#ac_add_options --enable-ui-locale=sl'
         elif (self.mozlocale == 6):
             print '#ac_add_options --enable-ui-locale=zh-TW'
             print '#ac_add_options --enable-ui-locale=zh-CN'
@@ -212,6 +220,7 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=fr'
             print '#ac_add_options --enable-ui-locale=it'
             print '#ac_add_options --enable-ui-locale=ru'
+            print '#ac_add_options --enable-ui-locale=sl'
         elif (self.mozlocale == 7):
             print '#ac_add_options --enable-ui-locale=zh-TW'
             print '#ac_add_options --enable-ui-locale=zh-CN'
@@ -222,6 +231,7 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=fr'
             print '#ac_add_options --enable-ui-locale=it'
             print '#ac_add_options --enable-ui-locale=ru'
+            print '#ac_add_options --enable-ui-locale=sl'
         elif (self.mozlocale == 8):
             print '#ac_add_options --enable-ui-locale=zh-TW'
             print '#ac_add_options --enable-ui-locale=zh-CN'
@@ -232,6 +242,7 @@ ac_add_options --with-l10n-base=../l10n"""
             print 'ac_add_options --enable-ui-locale=fr'
             print '#ac_add_options --enable-ui-locale=it'
             print '#ac_add_options --enable-ui-locale=ru'
+            print '#ac_add_options --enable-ui-locale=sl'
         elif (self.mozlocale == 9):
             print '#ac_add_options --enable-ui-locale=zh-TW'
             print '#ac_add_options --enable-ui-locale=zh-CN'
@@ -242,6 +253,7 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=fr'
             print 'ac_add_options --enable-ui-locale=it'
             print '#ac_add_options --enable-ui-locale=ru'
+            print '#ac_add_options --enable-ui-locale=sl'
         elif (self.mozlocale == 10):
             print '#ac_add_options --enable-ui-locale=zh-TW'
             print '#ac_add_options --enable-ui-locale=zh-CN'
@@ -252,6 +264,18 @@ ac_add_options --with-l10n-base=../l10n"""
             print '#ac_add_options --enable-ui-locale=fr'
             print '#ac_add_options --enable-ui-locale=it'
             print 'ac_add_options --enable-ui-locale=ru'
+            print '#ac_add_options --enable-ui-locale=sl'
+        elif (self.mozlocale == 11):
+            print '#ac_add_options --enable-ui-locale=zh-TW'
+            print '#ac_add_options --enable-ui-locale=zh-CN'
+            print '#ac_add_options --enable-ui-locale=ja'
+            print '#ac_add_options --enable-ui-locale=de'
+            print '#ac_add_options --enable-ui-locale=hu'
+            print '#ac_add_options --enable-ui-locale=nl'
+            print '#ac_add_options --enable-ui-locale=fr'
+            print '#ac_add_options --enable-ui-locale=it'
+            print '#ac_add_options --enable-ui-locale=ru'
+            print 'ac_add_options --enable-ui-locale=sl'
 
         print """
 ##
@@ -310,7 +334,7 @@ ac_add_options --disable-tests
 """
 
 if (len(sys.argv) < 3) or (len(sys.argv) > 6):
-    print ('Usage: %s <project> <arch> [en_US|zh_TW|zh_CN|ja|de|hu|nl] [release|nightly]' % sys.argv[0])
+    print ('Usage: %s <project> <arch> [en_US|zh_TW|zh_CN|ja|de|hu|nl|it|ru|sl] [release|nightly]' % sys.argv[0])
     sys.exit(0)
 
 if __name__ == '__main__':                  # this way the module can be

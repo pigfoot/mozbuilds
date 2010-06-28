@@ -61,6 +61,8 @@ l10n/it/other-licenses/branding/firefox/brand.dtd
 l10n/it/other-licenses/branding/firefox/brand.properties
 l10n/ru/other-licenses/branding/firefox/brand.dtd
 l10n/ru/other-licenses/branding/firefox/brand.properties
+l10n/sl/other-licenses/branding/firefox/brand.dtd
+l10n/sl/other-licenses/branding/firefox/brand.properties
 
 ## Misc
 mozilla/browser/locales/en-US/searchplugins/google.xml
