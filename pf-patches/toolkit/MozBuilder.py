@@ -93,6 +93,7 @@ class MozBuilder:
             return
 
         self.system('make -C mozilla -f client.mk profiledbuild | tee BuildLog.txt')
+        self.system('make -C mozilla package | tee -a BuildLog.txt')
 
         if (not self.postInst()):
             return
@@ -170,61 +171,39 @@ class MozBuilder:
         szArch    = self.aDictArch[self.szArch]['Ver']
         szLocale  = self.szLocale
 
-        if (not os.path.exists(os.path.join('mozilla', 'dist', 'bin', 'firefox.exe'))):
-            print '[%s] does not exist!' % (os.path.join('mozilla', 'dist', 'bin', 'firefox.exe'))
+        if (not os.path.exists(os.path.join('mozilla', 'dist', 'firefox', 'firefox.exe'))):
+            print '[%s] does not exist!' % (os.path.join('mozilla', 'dist', 'firefox', 'firefox.exe'))
             return False
 
-        szDistOldDir = os.path.join('mozilla', 'dist', 'bin')
+        szDistOldDir = os.path.join('mozilla', 'dist', 'firefox')
         szDistNewDir = os.path.join('mozilla', 'dist', self.szProjectFull)
 
-        self.dist(self.szProject, szDistOldDir, szDistNewDir)
+        os.rename(szDistOldDir, '_' + self.szProjectFull)
+        os.rename('_' + self.szProjectFull, szDistNewDir)
+
+        self.dist(self.szProject, szDistNewDir)
 
         ## TB(Pub), FX(Pri), FX(Pub)
         self.archive(szDistNewDir)
 
         return True
 
-    def dist(self, szProject, szSrcDir, szDstDir):
-
-        aListFxDelFiles = [ \
-            'dependentlibs.list',
-            'LICENSE',
-            'mangle.exe',
-            'README.txt',
-            'regxpcom.exe',
-            'shlibsign.exe',
-            'xpcshell.exe',
-            'xpidl.exe',
-            'xpt_dump.exe',
-            'xpt_link.exe',
-        ]
-
-        if (os.path.exists(szDstDir)):
-            shutil.rmtree(szDstDir)
-
-        shutil.copytree(szSrcDir, szDstDir)
-
-        for szFile in aListFxDelFiles:
-            if (os.path.exists(os.path.join(szDstDir, szFile))):
-                print 'Delete [%s] from [%s]' % (os.path.join(szDstDir, szFile), szDstDir)
-                os.remove(os.path.join(szDstDir, szFile))
-            else:
-                print '[%s] of [%s] does not exist!' % (os.path.join(szDstDir, szFile), szDstDir)
+    def dist(self, szProject, szTargetDir):
 
 #       if (szProject == 'tb'):
-#           shutil.rmtree(os.path.join(szDstDir, 'plusins'))
+#           shutil.rmtree(os.path.join(szTargetDir, 'plusins'))
 
-        shutil.copy2(os.path.join('..', 'pf-patches', 'plugins', 'np-mswmp.dll'), os.path.join(szDstDir, 'plugins', 'np-mswmp.dll'))
-        shutil.copy2(os.path.join('..', 'pf-patches', 'plugins', 'NPSWF32.dll'), os.path.join(szDstDir, 'plugins', 'NPSWF32.dll'))
-        shutil.copy2(os.path.join('..', 'pf-patches', 'searchplugins', 'dictionary-com.xml'), os.path.join(szDstDir, 'searchplugins', 'dictionary-com.xml'))
+        shutil.copy2(os.path.join('..', 'pf-patches', 'plugins', 'np-mswmp.dll'), os.path.join(szTargetDir, 'plugins', 'np-mswmp.dll'))
+        shutil.copy2(os.path.join('..', 'pf-patches', 'plugins', 'NPSWF32.dll'), os.path.join(szTargetDir, 'plugins', 'NPSWF32.dll'))
+        shutil.copy2(os.path.join('..', 'pf-patches', 'searchplugins', 'dictionary-com.xml'), os.path.join(szTargetDir, 'searchplugins', 'dictionary-com.xml'))
 
-        szCustomDir = os.path.join(szDstDir, '%s (pigfoot) %s' % (self.szTime, self.aDictArch[self.szArch]['Ver']))
+        szCustomDir = os.path.join(szTargetDir, '%s (pigfoot) %s' % (self.szTime, self.aDictArch[self.szArch]['Ver']))
         print 'mkdir [%s]' % szCustomDir
         os.mkdir(szCustomDir)
         print 'copy [%s] to [%s]' % ('.mozconfig' , os.path.join(szCustomDir, 'mozconfig'))
         shutil.copy(os.path.join('mozilla', '.mozconfig') , os.path.join(szCustomDir, 'mozconfig'))
 
-    def archive(self, szSrcDir):
+    def archive(self, szTargetDir):
 
         szProject = self.szProject
         szTime    = self.szTime
@@ -239,14 +218,10 @@ class MozBuilder:
         szPortableFile = szArchiveFile[:-7] + '-Portable.7z.exe'
 
         # Build update-packaging
-        self.system('make -C mozilla/other-licenses/bsdiff')
-        self.system('make -C mozilla/tools/update-packaging')
+        self.system('make -C mozilla/tools/update-packaging | tee -a BuildLog.txt')
 
         for root, dirs, files in os.walk('mozilla/dist/update'):
             self.system('mv %s/%s "%s"' % (root, files[0], os.path.join(szMarFile)))
-
-        self.system('make -C mozilla/other-licenses/bsdiff clean')
-        self.system('make -C mozilla/tools/update-packaging clean')
 
         if os.path.exists(szArchiveFile):
             os.remove(szArchiveFile)

@@ -288,7 +288,7 @@ ac_add_options --with-l10n-base=../l10n"""
 ##
 ## Installer
 ##
-ac_add_options --disable-installer
+ac_add_options --enable-installer
 
 ##
 ## Static or Dynmatic
