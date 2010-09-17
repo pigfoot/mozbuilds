@@ -34,7 +34,7 @@ class MozBuilder:
         ]
 
         self.NamorokaPatchSet = [
-            '01_google-ssl.patch',
+#           '01_google-ssl.patch',
             '02_tweaks.patch',
             '03_Bug476766.patch',
             '04_correct_hg_rev.patch'
