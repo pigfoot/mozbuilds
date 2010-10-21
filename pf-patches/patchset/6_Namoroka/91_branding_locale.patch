@@ -128,3 +128,20 @@
  vendorShortName=Mozilla
  
  homePageSingleStartMain=Firefox Start, hitra domača stran z vgrajenim iskalnikom
+--- l10n/tr/other-licenses/branding/firefox/brand.dtd.BAK	2010-10-21 18:12:48 +0800
++++ l10n/tr/other-licenses/branding/firefox/brand.dtd.	2010-10-21 18:19:55 +0800
+@@ -1,4 +1,4 @@
+ <!ENTITY brandShortName "Firefox">
+-<!ENTITY brandFullName "Mozilla Firefox">
++<!ENTITY brandFullName "Firefox">
+ <!ENTITY vendorShortName "Mozilla">
+ <!ENTITY logoCopyright "Firefox ve Firefox logoları Mozilla Vakfı'nın kayıtlı markalarıdır. Her hakkı saklıdır.">
+--- l10n/tr/other-licenses/branding/firefox/brand.properties.BAK	2010-10-21 18:12:48 +0800
++++ l10n/tr/other-licenses/branding/firefox/brand.properties	2010-10-21 18:20:02 +0800
+@@ -1,5 +1,5 @@
+ brandShortName=Firefox
+-brandFullName=Mozilla Firefox
++brandFullName=Firefox
+ vendorShortName=Mozilla
+ 
+ homePageSingleStartMain=Yerleşik arama özelliğiyle Firefox Başlangıç Sayfası

@@ -53,4 +53,9 @@ $MozBuilder fx ${BUILD_ID} p1 sl no-branding release public
 $MozBuilder fx ${BUILD_ID} p2 sl no-branding release public
 $MozBuilder fx ${BUILD_ID} p3 sl no-branding release public
 
+##############################################################################################
+$MozBuilder fx ${BUILD_ID} p1 tr no-branding release public
+$MozBuilder fx ${BUILD_ID} p2 tr no-branding release public
+$MozBuilder fx ${BUILD_ID} p3 tr no-branding release public
+
 cd ..

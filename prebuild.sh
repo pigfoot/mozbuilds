@@ -1,7 +1,7 @@
 #!/bin/bash
 
 TAG='FIREFOX_3_6_10_RELEASE'
-LOCALES='zh-TW zh-CN ja de fr it ru sl'
+LOCALES='zh-TW zh-CN ja de fr it ru sl tr'
 
 #FILENAME='TRUNK-source.tar.bz2'
 #FILENAME='FIREFOX_3_0_14_RELEASE-source.tar.bz2'
@@ -24,7 +24,6 @@ fi
 
 #echo "rm -rf l10n ; mkdir l10n ; cd l10n"
 #rm -rf l10n ; mkdir l10n ; cd l10n
-
 #for loc in ${LOCALES}; do
 #echo "hg clone http://hg.mozilla.org/releases/l10n-mozilla-${_GECKO_VER}/${loc}"
 #hg clone http://hg.mozilla.org/releases/l10n-mozilla-${_GECKO_VER}/${loc}
