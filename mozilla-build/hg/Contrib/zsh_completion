@@ -4,13 +4,34 @@
 # it into your zsh function path (/usr/share/zsh/site-functions for
 # instance)
 #
-# Copyright (C) 2005-6 Steve Borho
-# Copyright (C) 2006-8 Brendan Cully <brendan@kublai.com>
+# If you do not want to install it globally, you can copy it somewhere
+# else and add that directory to $fpath. This must be done before
+# compinit is called. If the file is copied to ~/.zsh.d, your ~/.zshrc
+# file could look like this:
 #
-# This is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free
-# Software Foundation; either version 2 of the License, or (at your
-# option) any later version.
+# fpath=("$HOME/.zsh.d" $fpath)
+# autoload -U compinit
+# compinit
+#
+# Copyright (C) 2005, 2006 Steve Borho <steve@borho.org>
+# Copyright (C) 2006-9 Brendan Cully <brendan@kublai.com>
+#
+# Permission is hereby granted, without written agreement and without
+# licence or royalty fees, to use, copy, modify, and distribute this
+# software and to distribute modified versions of this software for any
+# purpose, provided that the above copyright notice and the following
+# two paragraphs appear in all copies of this software.
+#
+# In no event shall the authors be liable to any party for direct,
+# indirect, special, incidental, or consequential damages arising out of
+# the use of this software and its documentation, even if the authors
+# have been advised of the possibility of such damage.
+#
+# The authors specifically disclaim any warranties, including, but not
+# limited to, the implied warranties of merchantability and fitness for
+# a particular purpose.  The software provided hereunder is on an "as
+# is" basis, and the authors have no obligation to provide maintenance,
+# support, updates, enhancements, or modifications.
 
 emulate -LR zsh
 setopt extendedglob
@@ -118,7 +139,7 @@ _hg_get_commands() {
   typeset -gA _hg_alias_list
   local hline cmd cmdalias
 
-  _call_program hg hg debugcomplete -v 2>/dev/null | while read -A hline
+  _call_program hg hg debugcomplete -v | while read -A hline
   do
     cmd=$hline[1]
     _hg_cmd_list+=($cmd)
@@ -145,11 +166,24 @@ _hg_tags() {
   typeset -a tags
   local tag rev
 
-  _hg_cmd tags 2> /dev/null | while read tag
+  _hg_cmd tags | while read tag
   do
     tags+=(${tag/ #    [0-9]#:*})
   done
   (( $#tags )) && _describe -t tags 'tags' tags
+}
+
+# likely merge candidates
+_hg_mergerevs() {
+  typeset -a heads
+  local myrev
+
+  heads=(${(f)"$(_hg_cmd heads --template '{rev}\\n')"})
+  # exclude own revision
+  myrev=$(_hg_cmd log -r . --template '{rev}\\n')
+  heads=(${heads:#$myrev})
+
+  (( $#heads )) && _describe -t heads 'heads' heads
 }
 
 _hg_files() {
@@ -171,7 +205,7 @@ _hg_files() {
 
 _hg_status() {
   [[ -d $PREFIX ]] || PREFIX=$PREFIX:h
-  status_files=(${(ps:\0:)"$(_hg_cmd status -0n$1 ./$PREFIX 2>/dev/null)"})
+  status_files=(${(ps:\0:)"$(_hg_cmd status -0n$1 ./$PREFIX)"})
 }
 
 _hg_unknown() {
@@ -193,11 +227,11 @@ _hg_modified() {
 }
 
 _hg_resolve() {
-  local rstate rpah
+  local rstate rpath
 
   [[ -d $PREFIX ]] || PREFIX=$PREFIX:h
 
-  _hg_cmd resolve -l ./$PREFIX 2> /dev/null | while read rstate rpath
+  _hg_cmd resolve -l ./$PREFIX | while read rstate rpath
   do
     [[ $rstate == 'R' ]] && resolved_files+=($rpath)
     [[ $rstate == 'U' ]] && unresolved_files+=($rpath)
@@ -241,7 +275,7 @@ _hg_ssh_urls() {
       compset -P '*/'
       if _cache_invalid "$cacheid" || ! _retrieve_cache "$cacheid"
       then
-        remdirs=(${${(M)${(f)"$(_call_program files ssh -a -x $host ls -1FL "${(q)rempath}" 2> /dev/null)"}##*/}%/})
+        remdirs=(${${(M)${(f)"$(_call_program files ssh -a -x $host ls -1FL "${(q)rempath}")"}##*/}%/})
         _store_cache "$cacheid" remdirs
       fi
       _describe -t directories 'remote directory' remdirs -S/
@@ -279,7 +313,7 @@ _hg_urls() {
 
 _hg_paths() {
   typeset -a paths pnames
-  _hg_cmd paths 2> /dev/null | while read -A pnames
+  _hg_cmd paths | while read -A pnames
   do
     paths+=($pnames[1])
   done
@@ -324,7 +358,7 @@ _hg_pat_opts=(
 _hg_diff_opts=(
   '(--text -a)'{-a,--text}'[treat all files as text]'
   '(--git -g)'{-g,--git}'[use git extended diff format]'
-  "--nodates[don't include dates in diff headers]")
+  "--nodates[omit dates from diff headers]")
 
 _hg_dryrun_opts=(
   '(--dry-run -n)'{-n,--dry-run}'[do not perform actions, just print output]')
@@ -343,7 +377,8 @@ _hg_remote_opts=(
   '--remotecmd[specify hg command to run on the remote side]:')
 
 _hg_cmd() {
-  _call_program hg hg "$_hg_cmd_globals[@]" "$@"
+  _call_program hg hg --config ui.verbose=0 --config defaults."$1"= \
+    "$_hg_cmd_globals[@]" "$@" 2> /dev/null
 }
 
 _hg_cmd_add() {
@@ -387,6 +422,27 @@ _hg_cmd_backout() {
     '(--rev -r)'{-r+,--rev}'[revision]:revision:_hg_tags' \
     '(--message -m)'{-m+,--message}'[use <text> as commit message]:text:' \
     '(--logfile -l)'{-l+,--logfile}'[read commit message from <file>]:log file:_files -g \*.txt'
+}
+
+_hg_cmd_bisect() {
+  _arguments -s -w : $_hg_global_opts \
+  '(-)'{-r,--reset}'[reset bisect state]' \
+  '(--good -g --bad -b --skip -s --reset -r)'{-g,--good}'[mark changeset good]'::revision:_hg_tags \
+  '(--good -g --bad -b --skip -s --reset -r)'{-b,--bad}'[mark changeset bad]'::revision:_hg_tags \
+  '(--good -g --bad -b --skip -s --reset -r)'{-s,--skip}'[skip testing changeset]' \
+  '(--command -c --noupdate -U)'{-c+,--command}'[use command to check changeset state]':commands:_command_names \
+  '(--command -c --noupdate -U)'{-U,--noupdate}'[do not update to target]'
+}
+
+_hg_cmd_branch() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--force -f)'{-f,--force}'[set branch name even if it shadows an existing branch]' \
+  '(--clean -C)'{-C,--clean}'[reset branch name to parent branch name]'
+}
+
+_hg_cmd_branches() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--active -a)'{-a,--active}'[show only branches that have unmerge heads]'
 }
 
 _hg_cmd_bundle() {
@@ -543,6 +599,14 @@ _hg_cmd_manifest() {
   ':revision:_hg_tags'
 }
 
+_hg_cmd_merge() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--force -f)'{-f,--force}'[force a merge with outstanding changes]' \
+  '(--rev -r 1)'{-r,--rev}'[revision to merge]:revision:_hg_mergerevs' \
+  '(--preview -P)'{-P,--preview}'[review revisions to merge (no merge is performed)]' \
+  ':revision:_hg_mergerevs'
+}
+
 _hg_cmd_outgoing() {
   _arguments -s -w : $_hg_global_opts $_hg_remote_opts $_hg_style_opts \
   '(--no-merges -M)'{-M,--no-merges}'[do not show merge revisions]' \
@@ -670,6 +734,11 @@ _hg_cmd_status() {
   '*:files:_files'
 }
 
+_hg_cmd_summary() {
+  _arguments -s -w : $_hg_global_opts \
+  '--remote[check for push and pull]'
+}
+
 _hg_cmd_tag() {
   _arguments -s -w : $_hg_global_opts \
   '(--local -l)'{-l,--local}'[make the tag local]' \
@@ -698,11 +767,6 @@ _hg_cmd_update() {
   ':revision:_hg_tags'
 }
 
-# bisect extension
-_hg_cmd_bisect() {
-  _arguments -s -w : $_hg_global_opts ':evaluation:(help init reset next good bad)'
-}
-
 # HGK
 _hg_cmd_view() {
   _arguments -s -w : $_hg_global_opts \
@@ -713,13 +777,13 @@ _hg_cmd_view() {
 # MQ
 _hg_qseries() {
   typeset -a patches
-  patches=(${(f)"$(_hg_cmd qseries 2>/dev/null)"})
+  patches=(${(f)"$(_hg_cmd qseries)"})
   (( $#patches )) && _describe -t hg-patches 'patches' patches
 }
 
 _hg_qapplied() {
   typeset -a patches
-  patches=(${(f)"$(_hg_cmd qapplied 2>/dev/null)"})
+  patches=(${(f)"$(_hg_cmd qapplied)"})
   if (( $#patches ))
   then
     patches+=(qbase qtip)
@@ -729,15 +793,27 @@ _hg_qapplied() {
 
 _hg_qunapplied() {
   typeset -a patches
-  patches=(${(f)"$(_hg_cmd qunapplied 2>/dev/null)"})
+  patches=(${(f)"$(_hg_cmd qunapplied)"})
   (( $#patches )) && _describe -t hg-unapplied-patches 'unapplied patches' patches
+}
+
+# unapplied, including guarded patches
+_hg_qdeletable() {
+  typeset -a unapplied
+  unapplied=(${(f)"$(_hg_cmd qseries)"})
+  for p in $(_hg_cmd qapplied)
+  do
+    unapplied=(${unapplied:#$p})
+  done
+
+  (( $#unapplied )) && _describe -t hg-allunapplied-patches 'all unapplied patches' unapplied
 }
 
 _hg_qguards() {
   typeset -a guards
   local guard
   compset -P "+|-"
-  _hg_cmd qselect -s 2>/dev/null | while read guard
+  _hg_cmd qselect -s | while read guard
   do
     guards+=(${guard#(+|-)})
   done
@@ -755,7 +831,7 @@ _hg_cmd_qdelete() {
   _arguments -s -w : $_hg_global_opts \
   '(--keep -k)'{-k,--keep}'[keep patch file]' \
   '*'{-r+,--rev}'[stop managing a revision]:applied patch:_hg_revrange' \
-  '*:unapplied patch:_hg_qunapplied'
+  '*:unapplied patch:_hg_qdeletable'
 }
 
 _hg_cmd_qdiff() {

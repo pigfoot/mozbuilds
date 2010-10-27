@@ -54,7 +54,7 @@ body {
   font-weight: bold;
 }
 
-.menu img { 
+.menu img {
   width: 75px;
   height: 90px;
   border: 0;
@@ -97,7 +97,7 @@ a { text-decoration:none; }
 .navigate {
   text-align: right;
   font-size: 60%;
-  margin: 1em 0 1em 0;
+  margin: 1em 0;
 }
 
 .tag {
@@ -122,7 +122,7 @@ ul#graphnodes .branchhead {
 
 .branchname {
   color: #000;
-  font-size: 60%; 
+  font-size: 60%;
   font-weight: normal;
   margin-left: .5em;
   vertical-align: baseline;
@@ -153,17 +153,15 @@ h3 {
 }
 
 .bigtable td {
-  padding: 1px 4px 1px 4px;
   vertical-align: top;
 }
 
 .bigtable th {
-  padding: 1px 4px 1px 4px;
+  padding: 1px 4px;
   border-bottom: 1px solid #999;
-  font-size: smaller;
 }
 .bigtable tr { border: none; }
-.bigtable .age { width: 6em; }
+.bigtable .age { width: 7em; }
 .bigtable .author { width: 12em; }
 .bigtable .description { }
 .bigtable .node { width: 5em; font-family: monospace;}
@@ -176,15 +174,18 @@ h3 {
 .source, .sourcefirst, .sourcelast {
   font-family: monospace;
   white-space: pre;
+  padding: 1px 4px;
   font-size: 90%;
 }
-.sourcefirst { border-bottom: 1px solid #999; font-weight: bold; font-size: smaller; }
+.sourcefirst { border-bottom: 1px solid #999; font-weight: bold; }
 .sourcelast { border-top: 1px solid #999; }
 .source a { color: #999; font-size: smaller; font-family: monospace;}
 .bottomline { border-bottom: 1px solid #999; }
 
 .fileline { font-family: monospace; }
 .fileline img { border: 0; }
+
+.tagEntry .closed { color: #99f; }
 
 /* Changeset entry */
 #changesetEntry {
@@ -195,7 +196,7 @@ h3 {
 }
 
 #changesetEntry th {
-  padding: 1px 4px 1px 4px;
+  padding: 1px 4px;
   width: 4em;
   text-align: right;
   font-weight: normal;
@@ -226,6 +227,14 @@ canvas {
 	margin: 0;
 }
 
+ul#graphnodes {
+	position: absolute;
+	z-index: 10;
+	top: -1.0em;
+	list-style: none inside none;
+	padding: 0;
+}
+
 ul#nodebgs {
 	list-style: none inside none;
 	padding: 0;
@@ -235,14 +244,6 @@ ul#nodebgs {
 
 ul#graphnodes li, ul#nodebgs li {
 	height: 39px;
-}
-
-ul#graphnodes {
-	position: absolute;
-	z-index: 10;
-	top: -1.0em;
-	list-style: none inside none;
-	padding: 0;
 }
 
 ul#graphnodes li .info {

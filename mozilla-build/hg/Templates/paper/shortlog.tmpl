@@ -10,13 +10,14 @@
 <div class="container">
 <div class="menu">
 <div class="logo">
-<a href="http://www.selenic.com/mercurial/">
+<a href="http://mercurial.selenic.com/">
 <img src="{staticurl}hglogo.png" alt="mercurial" /></a>
 </div>
 <ul>
 <li class="active">log</li>
 <li><a href="{url}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
 <li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
+<li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
 </ul>
 <ul>
 <li><a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a></li>
@@ -38,7 +39,11 @@
 files, or words in the commit message</div>
 </form>
 
-<div class="navigate">rev {rev}: {changenav%navshortentry}</div>
+<div class="navigate">
+<a href="{url}shortlog/{rev}{lessvars%urlparameter}">less</a>
+<a href="{url}shortlog/{rev}{morevars%urlparameter}">more</a>
+| rev {rev}: {changenav%navshort}
+</div>
 
 <table class="bigtable">
  <tr>
@@ -49,7 +54,12 @@ files, or words in the commit message</div>
 {entries%shortlogentry}
 </table>
 
-<div class="navigate">rev {rev}: {changenav%navshortentry}</div>
+<div class="navigate">
+<a href="{url}shortlog/{rev}{lessvars%urlparameter}">less</a>
+<a href="{url}shortlog/{rev}{morevars%urlparameter}">more</a>
+| rev {rev}: {changenav%navshort}
+</div>
+
 </div>
 </div>
 

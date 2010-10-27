@@ -12,5 +12,4 @@ set MOZ_TOOLS=%MOZILLABUILD%\moztools
 rem append moztools to PATH
 SET PATH=%PATH%;%MOZ_TOOLS%\bin
 
-cd "%USERPROFILE%"
-%MOZILLABUILD%\msys\bin\bash --login -i
+start /d "%USERPROFILE%" "" "%MOZILLABUILD%"\msys\bin\bash --login -i

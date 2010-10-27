@@ -47,5 +47,4 @@ if defined MOZBUILD_USE_SDK (
     )
 )
 
-cd "%USERPROFILE%"
-"%MOZILLABUILD%\msys\bin\bash" --login -i
+start /d "%USERPROFILE%" "" "%MOZILLABUILD%"\msys\bin\bash --login -i

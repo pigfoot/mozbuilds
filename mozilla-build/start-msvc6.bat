@@ -24,5 +24,4 @@ SET PATH=%PATH%;%MOZ_TOOLS%\bin
 rem Prepend MSVC paths
 call "%VC6DIR%\Bin\vcvars32.bat"
 
-cd "%USERPROFILE%"
-%MOZILLABUILD%\msys\bin\bash --login -i
+start /d "%USERPROFILE%" "" "%MOZILLABUILD%"\msys\bin\bash --login -i

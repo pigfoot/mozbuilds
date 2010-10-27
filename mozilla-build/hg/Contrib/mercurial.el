@@ -5,8 +5,8 @@
 ;; Author: Bryan O'Sullivan <bos@serpentine.com>
 
 ;; mercurial.el is free software; you can redistribute it and/or
-;; modify it under the terms of version 2 of the GNU General Public
-;; License as published by the Free Software Foundation.
+;; modify it under the terms of the GNU General Public License version
+;; 2 or any later version.
 
 ;; mercurial.el is distributed in the hope that it will be useful, but
 ;; WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -784,7 +784,7 @@ Push changes                          G    C-c h >      hg-push"
 (defun hg-help-overview ()
   "This is an overview of the Mercurial SCM mode for Emacs.
 
-You can find the source code, license (GPL v2), and credits for this
+You can find the source code, license (GPLv2+), and credits for this
 code by typing `M-x find-library mercurial RET'."
   (interactive)
   (hg-view-output ("Mercurial Help Overview")
@@ -837,11 +837,12 @@ With a prefix argument, prompt for the path to add."
   (interactive "d")
   (save-excursion
     (goto-char pos)
-    (let ((face (get-text-property pos 'face))
+    (let (face
 	  (inhibit-read-only t)
 	  bol)
       (beginning-of-line)
       (setq bol (+ (point) 4))
+      (setq face (get-text-property bol 'face))
       (end-of-line)
       (if (eq face 'bold)
 	  (progn

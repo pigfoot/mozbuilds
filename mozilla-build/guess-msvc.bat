@@ -35,6 +35,8 @@ SET MSVC8KEY=%MSVCROOTKEY%\8.0\Setup\VC
 SET MSVC8EXPRESSKEY=%MSVCEXPROOTKEY%\8.0\Setup\VC
 SET MSVC9KEY=%MSVCROOTKEY%\9.0\Setup\VC
 SET MSVC9EXPRESSKEY=%MSVCEXPROOTKEY%\9.0\Setup\VC
+SET MSVC10KEY=%MSVCROOTKEY%\10.0\Setup\VC
+SET MSVC10EXPRESSKEY=%MSVCEXPROOTKEY%\10.0\Setup\VC
 
 REM First see if we can find MSVC, then set the variable
 REM NOTE: delims=<tab><space>
@@ -94,6 +96,20 @@ if "%VC9EXPRESSDIR%"=="" (
   )
 )
 
+REG QUERY "%MSVC10KEY%" /v ProductDir >nul 2>nul
+if "%VC10DIR%"=="" (
+  IF %ERRORLEVEL% EQU 0 (
+    FOR /F "tokens=2* delims=	 " %%A IN ('REG QUERY "%MSVC10KEY%" /v ProductDir') DO SET VC10DIR=%%B
+  )
+)
+
+REG QUERY "%MSVC10EXPRESSKEY%" /v ProductDir >nul 2>nul
+if "%VC8EXPRESSDIR%"=="" (
+  IF %ERRORLEVEL% EQU 0 (
+    FOR /F "tokens=2* delims=	 " %%A IN ('REG QUERY "%MSVC10EXPRESSKEY%" /v ProductDir') DO SET VC10EXPRESSDIR=%%B
+  )
+)
+
 REM Look for Installed SDKs:
 SET SDKROOTKEY=HKLM\SOFTWARE\Microsoft\MicrosoftSDK\InstalledSDKs
 SET SDK2003SP1KEY=%SDKROOTKEY%\8F9E5EF3-A9A5-491B-A889-C58EFFECE8B3
@@ -109,8 +125,18 @@ REM Just a base value to compare against
 SET SDKVER=0
 SET SDKMINORVER=0
 
+REM Support a maximum version of the Windows SDK to use, to support older
+REM branches and older compilers.  (Note that this is unrelated to the configure
+REM option on which version of Windows to support.)
+IF NOT DEFINED MOZ_MAXWINSDK (
+  REM Maximum WinSDK version to use; 2 digits for major, 2 for minor, 2 for revision
+  REM Revivsion is A = 01, B = 02, etc.
+  SET MOZ_MAXWINSDK=999999
+)
+
+
 REG QUERY "%SDK7KEY%" /v InstallationFolder >nul 2>nul
-if "%SDKDIR%"=="" (
+if "%SDKDIR%"=="" IF %MOZ_MAXWINSDK% GEQ 70000 (
   IF %ERRORLEVEL% EQU 0 (
     FOR /F "tokens=2* usebackq delims=	 " %%A IN (`REG QUERY "%SDK7KEY%" /v InstallationFolder`) DO SET SDKDIR=%%B
     SET SDKVER=7
@@ -118,7 +144,7 @@ if "%SDKDIR%"=="" (
 )
 
 REG QUERY "%SDK61KEY%" /v InstallationFolder >nul 2>nul
-if "%SDKDIR%"=="" (
+if "%SDKDIR%"=="" IF %MOZ_MAXWINSDK% GEQ 60100 (
   IF %ERRORLEVEL% EQU 0 (
     FOR /F "tokens=2* usebackq delims=	 " %%A IN (`REG QUERY "%SDK61KEY%" /v InstallationFolder`) DO SET SDKDIR=%%B
     SET SDKVER=6
@@ -127,7 +153,7 @@ if "%SDKDIR%"=="" (
 )
 
 REG QUERY "%SDK6AKEY%" /v InstallationFolder >nul 2>nul
-if "%SDKDIR%"=="" (
+if "%SDKDIR%"=="" IF %MOZ_MAXWINSDK% GEQ 60001 (
   IF %ERRORLEVEL% EQU 0 (
     FOR /F "tokens=2* usebackq delims=	 " %%A IN (`REG QUERY "%SDK6AKEY%" /v InstallationFolder`) DO SET SDKDIR=%%B
     SET SDKVER=6
@@ -137,7 +163,7 @@ if "%SDKDIR%"=="" (
 )
 
 REG QUERY "%SDK6KEY%" /v InstallationFolder >nul 2>nul
-if "%SDKDIR%"=="" (
+if "%SDKDIR%"=="" IF %MOZ_MAXWINSDK% GEQ 60000 (
   IF %ERRORLEVEL% EQU 0 (
     FOR /F "tokens=2* usebackq delims=	 " %%A IN (`REG QUERY "%SDK6KEY%" /v InstallationFolder`) DO SET SDKDIR=%%B
     SET SDKVER=6
@@ -153,7 +179,7 @@ if "%SDKVER%"=="6" (
 )
 
 REG QUERY "%SDK2003SP2KEY%" /v "Install Dir" >nul 2>nul
-if "%PSDKDIR%"=="" (
+if "%PSDKDIR%"=="" IF %MOZ_MAXWINSDK% GEQ 50000 (
   IF %ERRORLEVEL% EQU 0 (
     FOR /F "tokens=3* delims=	 " %%A IN ('REG QUERY "%SDK2003SP2KEY%" /v "Install Dir"') DO SET PSDKDIR=%%B
     REM arbitrary, but works for me
@@ -162,7 +188,7 @@ if "%PSDKDIR%"=="" (
 )
 
 REG QUERY "%SDK2003SP1KEY%" /v "Install Dir" >nul 2>nul
-if "%PSDKDIR%"=="" (
+if "%PSDKDIR%"=="" IF %MOZ_MAXWINSDK% GEQ 40000 (
   IF %ERRORLEVEL% EQU 0 (
     FOR /F "tokens=3* delims=	 " %%A IN ('REG QUERY "%SDK2003SP1KEY%" /v "Install Dir"') DO SET PSDKDIR=%%B
     SET PSDKVER=4
@@ -175,6 +201,8 @@ if defined %VC8DIR% (ECHO Visual C++ 8 directory: %VC8DIR%)
 if defined %VC8EXPRESSDIR% (ECHO Visual C++ 8 Express directory: %VC8EXPRESSDIR%)
 if defined %VC9DIR% (ECHO Visual C++ 9 directory: %VC9DIR%)
 if defined %VC9EXPRESSDIR% (ECHO Visual C++ 9 Express directory: %VC9EXPRESSDIR%)
+if defined %VC10DIR% (ECHO Visual C++ 10 directory: %VC10DIR%)
+if defined %VC10EXPRESSDIR% (ECHO Visual C++ 10 Express directory: %VC10EXPRESSDIR%)
 if "%SDKDIR%"=="" (
     SET SDKDIR=%PSDKDIR%
     SET SDKVER=%PSDKVER%

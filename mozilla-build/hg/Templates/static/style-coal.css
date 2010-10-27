@@ -18,7 +18,7 @@ body {
 }
 
 #.main {
-  width:98%;
+  width: 98%;
 }
 
 .overflow {
@@ -106,7 +106,7 @@ a { text-decoration:none; }
 .navigate {
   text-align: right;
   font-size: 60%;
-  margin: 1em 0 1em 0;
+  margin: 1em 0;
 }
 
 .tag {
@@ -131,7 +131,7 @@ ul#graphnodes .branchhead {
 
 .branchname {
   color: #000;
-  font-size: 60%; 
+  font-size: 60%;
   font-weight: normal;
   margin-left: .5em;
   vertical-align: baseline;
@@ -162,14 +162,12 @@ h3 {
 }
 
 .bigtable td {
-  padding: 1px 4px 1px 4px;
   vertical-align: top;
 }
 
 .bigtable th {
-  padding: 1px 4px 1px 4px;
+  padding: 1px 4px;
   border-bottom: 1px solid #999;
-  font-size: smaller;
 }
 .bigtable tr { border: none; }
 .bigtable .age { width: 6em; }
@@ -187,15 +185,18 @@ h3 {
 .source, .sourcefirst, .sourcelast {
   font-family: monospace;
   white-space: pre;
+  padding: 1px 4px;
   font-size: 90%;
 }
-.sourcefirst { border-bottom: 1px solid #999; font-weight: bold; font-size: smaller; }
+.sourcefirst { border-bottom: 1px solid #999; font-weight: bold; }
 .sourcelast { border-top: 1px solid #999; }
 .source a { color: #999; font-size: smaller; font-family: monospace;}
 .bottomline { border-bottom: 1px solid #999; }
 
 .fileline { font-family: monospace; }
 .fileline img { border: 0; }
+
+.tagEntry .closed { color: #99f; }
 
 /* Changeset entry */
 #changesetEntry {
@@ -206,7 +207,7 @@ h3 {
 }
 
 #changesetEntry th {
-  padding: 1px 4px 1px 4px;
+  padding: 1px 4px;
   width: 4em;
   text-align: right;
   font-weight: normal;
@@ -221,6 +222,7 @@ div.description {
   padding: .3em;
 }
 
+/* Graph */
 div#wrapper {
 	position: relative;
 	border-top: 1px solid black;
