@@ -32,9 +32,11 @@ mozilla/modules/libmar/src/Makefile.in
 mozilla/modules/libmar/tool/Makefile.in
 mozilla/browser/app/firefox.exe.manifest
 mozilla/toolkit/mozapps/update/src/updater/Makefile.in
+mozilla/toolkit/mozapps/update/updater/Makefile.in
 
 ## manifest
 mozilla/toolkit/mozapps/update/src/updater/updater.exe.manifest
+mozilla/toolkit/mozapps/update/updater/updater.exe.manifest
 mozilla/toolkit/crashreporter/client/crashreporter.exe.manifest
 mozilla/build/wince/tools/Makefile
 mozilla/build/automationutils.py

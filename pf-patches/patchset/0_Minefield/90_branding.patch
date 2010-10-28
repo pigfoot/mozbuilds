@@ -1,0 +1,16 @@
+--- mozilla/other-licenses/branding/firefox/locales/en-US/brand.dtd.BAK	2006-08-25 08:02:37.000000000 +0800
++++ mozilla/other-licenses/branding/firefox/locales/en-US/brand.dtd	2007-06-04 19:25:10.450102700 +0800
+@@ -1,3 +1,3 @@
+ <!ENTITY  brandShortName        "Firefox">
+-<!ENTITY  brandFullName         "Mozilla Firefox">
++<!ENTITY  brandFullName         "Firefox">
+ <!ENTITY  vendorShortName       "Mozilla">
+--- mozilla/other-licenses/branding/firefox/locales/en-US/brand.properties.BAK  2006-08-25 08:02:37.000000000 +0800
++++ mozilla/other-licenses/branding/firefox/locales/en-US/brand.properties      2007-06-04 19:25:10.450102700 +0800
+@@ -1,5 +1,5 @@
+ brandShortName=Firefox
+-brandFullName=Mozilla Firefox
++brandFullName=Firefox
+ vendorShortName=Mozilla
+ 
+ homePageSingleStartMain=Firefox Start, a fast home page with built-in search

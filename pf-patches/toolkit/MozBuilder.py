@@ -31,6 +31,7 @@ class MozBuilder:
         self.szUpdateChannel = szUpdateChannel
 
         self.MinefieldPatchSet = [
+            '02_tweaks.patch'
         ]
 
         self.NamorokaPatchSet = [
@@ -135,7 +136,8 @@ class MozBuilder:
             self.aDictBranch[self.szBranch]["PatchSet"].append('91_branding_locale.patch')
 
         # Durty patch to perform dos2unix forcely.
-        self.system('tr -d \'\\r\' < %s > %s' % ('l10n/it/other-licenses/branding/firefox/brand.dtd.BAK', 'l10n/it/other-licenses/branding/firefox/brand.dtd'))
+        if os.path.exists('l10n/it/other-licenses/branding/firefox/brand.dtd.BAK'):
+            self.system('tr -d \'\\r\' < %s > %s' % ('l10n/it/other-licenses/branding/firefox/brand.dtd.BAK', 'l10n/it/other-licenses/branding/firefox/brand.dtd'))
 
         for patch in self.aDictBranch[self.szBranch]["PatchSet"]:
             self.system('patch -p0 < %s' % self.aDictBranch[self.szBranch]["PatchPath"] + patch)

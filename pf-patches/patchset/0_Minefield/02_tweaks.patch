@@ -1,0 +1,28 @@
+--- mozilla/browser/app/profile/firefox.js.BAK  2010-10-27 14:35:39 +0800
++++ mozilla/browser/app/profile/firefox.js      2010-10-27 14:55:25 +0800
+@@ -1056,3 +1056,25 @@
+
+ // Whether the Panorama should animate going in/out of tabs
+ pref("browser.panorama.animate_zoom", true);
++
++// pigfoot's tweaks
++pref("general.useragent.extra.pigfoot", "(pigfoot,__pigfoot_useragent_arch__)");
++pref("app.update.url", "https://update.pigfoot.org/__pigfoot_arch__/2/%PRODUCT%/%VERSION%/%BUILD_ID%/%BUILD_TARGET%/%LOCALE%/%CHANNEL%/%OS_VERSION%/update.xml");
++pref("browser.enable_automatic_image_resizing", false);
++pref("network.http.max-connections", 48);
++pref("network.http.max-connections-per-server", 16);
++pref("network.http.max-persistent-connections-per-proxy", 16);
++pref("network.http.max-persistent-connections-per-server", 8);
++pref("network.http.pipelining", true);
++pref("network.http.proxy.pipelining", true);
++pref("network.http.pipelining.maxrequests", 8);
++pref("plugin.expose_full_path", true);
++pref("config.trim_on_minimize", true);
++pref("extensions.checkCompatibility.3.6", false);  // Bug521905
++
++//http://www.junauza.com/2010/05/hacks-to-make-firefox-faster-than.html
++pref("nglayout.initialpaint.delay", 0);
++pref("content.notify.interval", 500000);
++pref("content.notify.ontimer", true);
++pref("content.switch.threshold", 250000);
++pref("content.interrupt.parsing", false);
