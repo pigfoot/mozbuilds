@@ -24,24 +24,22 @@ class MozGenerator:
         # project = 2       -> tb
         # project = 3       -> sm
         #
-        # arch = 0          -> P0: G7-SSE
-        # arch = 1          -> P1: G6-MMX
-        # arch = 2          -> P2: G6-SSE
-        # arch = 3          -> P3: G7-SSE2
+        # arch = 0          -> P1: G6-MMX
+        # arch = 1          -> P2: G6-SSE
+        # arch = 2          -> P3: G7-SSE2
         #
-        # locale = 0        -> uninit
-        # locale = 1        -> en_US
-        # locale = 2        -> zh_TW
-        # locale = 3        -> zh_CN
-        # locale = 4        -> ja
-        # locale = 5        -> de
-        # locale = 6        -> hu
-        # locale = 7        -> nl (dutch)
-        # locale = 8        -> fr (dutch)
-        # locale = 9        -> it
-        # locale = 10       -> ru
-        # locale = 11       -> sl
-        # locale = 12       -> tr
+        # locale = 0        -> en_US
+        # locale = 1        -> zh_TW
+        # locale = 2        -> zh_CN
+        # locale = 3        -> ja
+        # locale = 4        -> de
+        # locale = 5        -> hu
+        # locale = 6        -> nl (dutch)
+        # locale = 7        -> fr (dutch)
+        # locale = 8        -> it
+        # locale = 9        -> ru
+        # locale = 10       -> sl
+        # locale = 11       -> tr
         #
         # nightly = 0       -> uninit
         # nightly = 1       -> nightly
@@ -66,42 +64,40 @@ class MozGenerator:
             print ('<project> must be fx, tb or sm!')
             sys.exit(0)
 
-        if _arch == 'p0':
+        if _arch == 'p1':
             self.arch=0
-        elif _arch == 'p1':
-            self.arch=1
         elif _arch == 'p2':
-            self.arch=2
+            self.arch=1
         elif _arch == 'p3':
-            self.arch=3
+            self.arch=2
         else:
-            print ('<arch> must be p0, p1, p2, or p3!')
+            print ('<arch> must be p1, p2, or p3!')
             sys.exit(0)
 
         if _mozlocale == 'en_us':
-            self.mozlocale=1
+            self.mozlocale=0
         elif _mozlocale == 'zh_tw':
-            self.mozlocale=2
+            self.mozlocale=1
         elif _mozlocale == 'zh_cn':
-            self.mozlocale=3
+            self.mozlocale=2
         elif _mozlocale == 'ja':
-            self.mozlocale=4
+            self.mozlocale=3
         elif _mozlocale == 'de':
-            self.mozlocale=5
+            self.mozlocale=4
         elif _mozlocale == 'hu':
-            self.mozlocale=6
+            self.mozlocale=5
         elif _mozlocale == 'nl':
-            self.mozlocale=7
+            self.mozlocale=6
         elif _mozlocale == 'fr':
-            self.mozlocale=8
+            self.mozlocale=7
         elif _mozlocale == 'it':
-            self.mozlocale=9
+            self.mozlocale=8
         elif _mozlocale == 'ru':
-            self.mozlocale=10
+            self.mozlocale=9
         elif _mozlocale == 'sl':
-            self.mozlocale=11
+            self.mozlocale=10
         elif _mozlocale == 'tr':
-            self.mozlocale=12
+            self.mozlocale=11
         else:
             print ('<locale> must be en_US, zh_TW, zh_CN, ja, de, hu, nl, fr, it ru, sl or tr!')
             sys.exit(0)
@@ -125,182 +121,44 @@ class MozGenerator:
                 print '. $topsrcdir/browser/config/mozconfig'
             elif (self.project == 2):
                 print '. $topsrcdir/mail/config/mozconfig'
-    
+
         print """
 mk_add_options 'PROFILE_GEN_SCRIPT=$(PYTHON) $(OBJDIR)/_profile/pgo/profileserver.py'
 
 ##
 ## CPU Optimization
 ##"""
-        if (self.arch == 0):
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -fp:fast -GS-"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS-"'
-            print 'ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS-"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE2 -fp:fast -GS-"'
-        elif (self.arch == 1):
-            print 'ac_add_options --enable-optimize="-Ox -GLAs -fp:fast -GS-"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS-"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS-"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE2 -fp:fast -GS-"'
-        elif (self.arch == 2):
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -fp:fast -GS-"'
-            print 'ac_add_options --enable-optimize="-O2 -GLAs -arch:SSE -fp:fast -GS-"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS-"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE2 -fp:fast -GS-"'
-        elif (self.arch == 3):
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -fp:fast -GS-"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS-"'
-            print '#ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE -fp:fast -GS-"'
-            print 'ac_add_options --enable-optimize="-Ox -GLAs -arch:SSE2 -fp:fast -GS-"'
+        _temp_list = []
+        _temp_templ = '#ac_add_options --enable-optimize="-O2 -GAs -fp:fast -GS-'
+        _temp_list.append(_temp_templ)
+        _temp_list.append(_temp_templ + ' -arch:SSE')
+        _temp_list.append(_temp_templ + ' -arch:SSE2')
+        _temp_list[self.arch] = _temp_list[self.arch][1:]
+        for line in _temp_list:
+            print line
 
         print """
 #
 # Localized Firefox
 #
 ac_add_options --with-l10n-base=../l10n"""
-        if (self.mozlocale == 1):
-            print '#ac_add_options --enable-ui-locale=zh-TW'
-            print '#ac_add_options --enable-ui-locale=zh-CN'
-            print '#ac_add_options --enable-ui-locale=ja'
-            print '#ac_add_options --enable-ui-locale=de'
-            print '#ac_add_options --enable-ui-locale=hu'
-            print '#ac_add_options --enable-ui-locale=nl'
-            print '#ac_add_options --enable-ui-locale=fr'
-            print '#ac_add_options --enable-ui-locale=it'
-            print '#ac_add_options --enable-ui-locale=ru'
-            print '#ac_add_options --enable-ui-locale=sl'
-        elif (self.mozlocale == 2):
-            print 'ac_add_options --enable-ui-locale=zh-TW'
-            print '#ac_add_options --enable-ui-locale=zh-CN'
-            print '#ac_add_options --enable-ui-locale=ja'
-            print '#ac_add_options --enable-ui-locale=de'
-            print '#ac_add_options --enable-ui-locale=hu'
-            print '#ac_add_options --enable-ui-locale=nl'
-            print '#ac_add_options --enable-ui-locale=fr'
-            print '#ac_add_options --enable-ui-locale=it'
-            print '#ac_add_options --enable-ui-locale=ru'
-            print '#ac_add_options --enable-ui-locale=sl'
-            print '#ac_add_options --enable-ui-locale=tr'
-        elif (self.mozlocale == 3):
-            print '#ac_add_options --enable-ui-locale=zh-TW'
-            print 'ac_add_options --enable-ui-locale=zh-CN'
-            print '#ac_add_options --enable-ui-locale=ja'
-            print '#ac_add_options --enable-ui-locale=de'
-            print '#ac_add_options --enable-ui-locale=hu'
-            print '#ac_add_options --enable-ui-locale=nl'
-            print '#ac_add_options --enable-ui-locale=fr'
-            print '#ac_add_options --enable-ui-locale=it'
-            print '#ac_add_options --enable-ui-locale=ru'
-            print '#ac_add_options --enable-ui-locale=sl'
-            print '#ac_add_options --enable-ui-locale=tr'
-        elif (self.mozlocale == 4):
-            print '#ac_add_options --enable-ui-locale=zh-TW'
-            print '#ac_add_options --enable-ui-locale=zh-CN'
-            print 'ac_add_options --enable-ui-locale=ja'
-            print '#ac_add_options --enable-ui-locale=de'
-            print '#ac_add_options --enable-ui-locale=hu'
-            print '#ac_add_options --enable-ui-locale=nl'
-            print '#ac_add_options --enable-ui-locale=fr'
-            print '#ac_add_options --enable-ui-locale=it'
-            print '#ac_add_options --enable-ui-locale=ru'
-            print '#ac_add_options --enable-ui-locale=sl'
-            print '#ac_add_options --enable-ui-locale=tr'
-        elif (self.mozlocale == 5):
-            print '#ac_add_options --enable-ui-locale=zh-TW'
-            print '#ac_add_options --enable-ui-locale=zh-CN'
-            print '#ac_add_options --enable-ui-locale=ja'
-            print 'ac_add_options --enable-ui-locale=de'
-            print '#ac_add_options --enable-ui-locale=hu'
-            print '#ac_add_options --enable-ui-locale=nl'
-            print '#ac_add_options --enable-ui-locale=fr'
-            print '#ac_add_options --enable-ui-locale=it'
-            print '#ac_add_options --enable-ui-locale=ru'
-            print '#ac_add_options --enable-ui-locale=sl'
-            print '#ac_add_options --enable-ui-locale=tr'
-        elif (self.mozlocale == 6):
-            print '#ac_add_options --enable-ui-locale=zh-TW'
-            print '#ac_add_options --enable-ui-locale=zh-CN'
-            print '#ac_add_options --enable-ui-locale=ja'
-            print '#ac_add_options --enable-ui-locale=de'
-            print 'ac_add_options --enable-ui-locale=hu'
-            print '#ac_add_options --enable-ui-locale=nl'
-            print '#ac_add_options --enable-ui-locale=fr'
-            print '#ac_add_options --enable-ui-locale=it'
-            print '#ac_add_options --enable-ui-locale=ru'
-            print '#ac_add_options --enable-ui-locale=sl'
-            print '#ac_add_options --enable-ui-locale=tr'
-        elif (self.mozlocale == 7):
-            print '#ac_add_options --enable-ui-locale=zh-TW'
-            print '#ac_add_options --enable-ui-locale=zh-CN'
-            print '#ac_add_options --enable-ui-locale=ja'
-            print '#ac_add_options --enable-ui-locale=de'
-            print '#ac_add_options --enable-ui-locale=hu'
-            print 'ac_add_options --enable-ui-locale=nl'
-            print '#ac_add_options --enable-ui-locale=fr'
-            print '#ac_add_options --enable-ui-locale=it'
-            print '#ac_add_options --enable-ui-locale=ru'
-            print '#ac_add_options --enable-ui-locale=sl'
-            print '#ac_add_options --enable-ui-locale=tr'
-        elif (self.mozlocale == 8):
-            print '#ac_add_options --enable-ui-locale=zh-TW'
-            print '#ac_add_options --enable-ui-locale=zh-CN'
-            print '#ac_add_options --enable-ui-locale=ja'
-            print '#ac_add_options --enable-ui-locale=de'
-            print '#ac_add_options --enable-ui-locale=hu'
-            print '#ac_add_options --enable-ui-locale=nl'
-            print 'ac_add_options --enable-ui-locale=fr'
-            print '#ac_add_options --enable-ui-locale=it'
-            print '#ac_add_options --enable-ui-locale=ru'
-            print '#ac_add_options --enable-ui-locale=sl'
-            print '#ac_add_options --enable-ui-locale=tr'
-        elif (self.mozlocale == 9):
-            print '#ac_add_options --enable-ui-locale=zh-TW'
-            print '#ac_add_options --enable-ui-locale=zh-CN'
-            print '#ac_add_options --enable-ui-locale=ja'
-            print '#ac_add_options --enable-ui-locale=de'
-            print '#ac_add_options --enable-ui-locale=hu'
-            print '#ac_add_options --enable-ui-locale=nl'
-            print '#ac_add_options --enable-ui-locale=fr'
-            print 'ac_add_options --enable-ui-locale=it'
-            print '#ac_add_options --enable-ui-locale=ru'
-            print '#ac_add_options --enable-ui-locale=sl'
-            print '#ac_add_options --enable-ui-locale=tr'
-        elif (self.mozlocale == 10):
-            print '#ac_add_options --enable-ui-locale=zh-TW'
-            print '#ac_add_options --enable-ui-locale=zh-CN'
-            print '#ac_add_options --enable-ui-locale=ja'
-            print '#ac_add_options --enable-ui-locale=de'
-            print '#ac_add_options --enable-ui-locale=hu'
-            print '#ac_add_options --enable-ui-locale=nl'
-            print '#ac_add_options --enable-ui-locale=fr'
-            print '#ac_add_options --enable-ui-locale=it'
-            print 'ac_add_options --enable-ui-locale=ru'
-            print '#ac_add_options --enable-ui-locale=sl'
-            print '#ac_add_options --enable-ui-locale=tr'
-        elif (self.mozlocale == 11):
-            print '#ac_add_options --enable-ui-locale=zh-TW'
-            print '#ac_add_options --enable-ui-locale=zh-CN'
-            print '#ac_add_options --enable-ui-locale=ja'
-            print '#ac_add_options --enable-ui-locale=de'
-            print '#ac_add_options --enable-ui-locale=hu'
-            print '#ac_add_options --enable-ui-locale=nl'
-            print '#ac_add_options --enable-ui-locale=fr'
-            print '#ac_add_options --enable-ui-locale=it'
-            print '#ac_add_options --enable-ui-locale=ru'
-            print 'ac_add_options --enable-ui-locale=sl'
-            print '#ac_add_options --enable-ui-locale=tr'
-        elif (self.mozlocale == 12):
-            print '#ac_add_options --enable-ui-locale=zh-TW'
-            print '#ac_add_options --enable-ui-locale=zh-CN'
-            print '#ac_add_options --enable-ui-locale=ja'
-            print '#ac_add_options --enable-ui-locale=de'
-            print '#ac_add_options --enable-ui-locale=hu'
-            print '#ac_add_options --enable-ui-locale=nl'
-            print '#ac_add_options --enable-ui-locale=fr'
-            print '#ac_add_options --enable-ui-locale=it'
-            print '#ac_add_options --enable-ui-locale=ru'
-            print '#ac_add_options --enable-ui-locale=sl'
-            print 'ac_add_options --enable-ui-locale=tr'
+        _temp_list = []
+        _temp_templ = '#ac_add_options --enable-ui-locale='
+        _temp_list.append(_temp_templ + 'zh-TW')
+        _temp_list.append(_temp_templ + 'zh-CN')
+        _temp_list.append(_temp_templ + 'ja')
+        _temp_list.append(_temp_templ + 'de')
+        _temp_list.append(_temp_templ + 'hu')
+        _temp_list.append(_temp_templ + 'nl')
+        _temp_list.append(_temp_templ + 'fr')
+        _temp_list.append(_temp_templ + 'it')
+        _temp_list.append(_temp_templ + 'ru')
+        _temp_list.append(_temp_templ + 'sl')
+        _temp_list.append(_temp_templ + 'tr')
+        if (self.mozlocale > 0):
+            _temp_list[self.mozlocale - 1] = _temp_list[self.mozlocale - 1][1:]
+        for line in _temp_list:
+            print line
 
         print """
 ##
