@@ -143,18 +143,18 @@ mk_add_options 'PROFILE_GEN_SCRIPT=$(PYTHON) $(OBJDIR)/_profile/pgo/profileserve
 #
 ac_add_options --with-l10n-base=../l10n"""
         _temp_list = []
-        _temp_templ = '#ac_add_options --enable-ui-locale='
-        _temp_list.append(_temp_templ + 'zh-TW')
-        _temp_list.append(_temp_templ + 'zh-CN')
-        _temp_list.append(_temp_templ + 'ja')
-        _temp_list.append(_temp_templ + 'de')
-        _temp_list.append(_temp_templ + 'hu')
-        _temp_list.append(_temp_templ + 'nl')
-        _temp_list.append(_temp_templ + 'fr')
-        _temp_list.append(_temp_templ + 'it')
-        _temp_list.append(_temp_templ + 'ru')
-        _temp_list.append(_temp_templ + 'sl')
-        _temp_list.append(_temp_templ + 'tr')
+        _temp_templ = '#ac_add_options --enable-ui-locale=%s'
+        _temp_list.append(_temp_templ % 'zh-TW')
+        _temp_list.append(_temp_templ % 'zh-CN')
+        _temp_list.append(_temp_templ % 'ja')
+        _temp_list.append(_temp_templ % 'de')
+        _temp_list.append(_temp_templ % 'hu')
+        _temp_list.append(_temp_templ % 'nl')
+        _temp_list.append(_temp_templ % 'fr')
+        _temp_list.append(_temp_templ % 'it')
+        _temp_list.append(_temp_templ % 'ru')
+        _temp_list.append(_temp_templ % 'sl')
+        _temp_list.append(_temp_templ % 'tr')
         if (self.mozlocale > 0):
             _temp_list[self.mozlocale - 1] = _temp_list[self.mozlocale - 1][1:]
         for line in _temp_list:
