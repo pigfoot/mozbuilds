@@ -129,10 +129,10 @@ mk_add_options 'PROFILE_GEN_SCRIPT=$(PYTHON) $(OBJDIR)/_profile/pgo/profileserve
 ## CPU Optimization
 ##"""
         _temp_list = []
-        _temp_templ = '#ac_add_options --enable-optimize="-O2 -GAs -fp:fast -GS-'
-        _temp_list.append(_temp_templ)
-        _temp_list.append(_temp_templ + ' -arch:SSE')
-        _temp_list.append(_temp_templ + ' -arch:SSE2')
+        _temp_templ = '#ac_add_options --enable-optimize="-O2 -GAs %s-fp:fast -GS-"'
+        _temp_list.append(_temp_templ % '')
+        _temp_list.append(_temp_templ % '-arch:SSE ')
+        _temp_list.append(_temp_templ % '-arch:SSE2 ')
         _temp_list[self.arch] = _temp_list[self.arch][1:]
         for line in _temp_list:
             print line
