@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TAG='FIREFOX_3_6_11_RELEASE'
+TAG='FIREFOX_3_6_12_RELEASE'
 LOCALES='zh-TW zh-CN ja de fr it ru sl tr'
 
 #FILENAME='TRUNK-source.tar.bz2'
@@ -32,10 +32,10 @@ fi
 
 echo "cd mozilla"
 cd mozilla
-echo "hg pull"
-hg pull
-echo "hg update ${TAG}"
-hg update ${TAG}
+echo "hg pull -u"
+hg pull -u
+echo "hg update -C ${TAG}"
+hg update -C ${TAG}
 echo "cd -"
 cd -
 
@@ -44,10 +44,10 @@ cd l10n
 for loc in ${LOCALES}; do
 echo "cd ${loc}"
 cd ${loc}
-echo "hg pull"
-hg pull
-echo "hg update ${TAG}"
-hg update ${TAG}
+echo "hg pull -u"
+hg pull -u
+echo "hg update -C ${TAG}"
+hg update -C ${TAG}
 echo "cd -"
 cd -
 done
