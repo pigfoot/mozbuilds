@@ -14,7 +14,7 @@
 """
 
 Filelists = """
- 
+
 ## profile
 mozilla/browser/app/profile/firefox.js
 mozilla/mail/app/profile/all-thunderbird.js
@@ -22,7 +22,6 @@ mozilla/mail/app/profile/all-thunderbird.js
 ## branding
 mozilla/other-licenses/branding/firefox/firefox.ico
 mozilla/other-licenses/branding/firefox/content/about.png
-mozilla/other-licenses/branding/firefox/content/aboutCredits.png
 mozilla/other-licenses/branding/firefox/locales/en-US/brand.dtd
 mozilla/other-licenses/branding/firefox/locales/en-US/brand.properties
 
@@ -42,7 +41,20 @@ mozilla/build/wince/tools/Makefile
 mozilla/build/automationutils.py
 
 ## jemalloc
+mozilla/gfx/angle/src/libEGL/Makefile.in
+mozilla/gfx/angle/src/libGLESv2/Makefile.in
+mozilla/toolkit/library/Makefile.in
+mozilla/config/autoconf.mk.in
+mozilla/config/rules.mk
+mozilla/configure.in
+mozilla/js/src/config/rules.mk
 mozilla/memory/jemalloc/Makefile.in
+mozilla/memory/jemalloc/fixcrt.py
+mozilla/memory/jemalloc/jemalloc.c
+mozilla/memory/jemalloc/jemalloc.def
+mozilla/memory/jemalloc/jemalloc.h
+mozilla/memory/mozalloc/mozalloc.cpp
+mozilla/browser/installer/package-manifest.in
 
 ## For Bug476766
 mozilla/security/nss/lib/ckfw/builtins/certdata.c
@@ -78,7 +90,7 @@ mozilla/toolkit/content/Makefile.in
 import os
 
 class MainImpl:
-    def __init__ (self, bBackup):   
+    def __init__ (self, bBackup):
         self.fileList = [ line.strip() for line in Filelists.split('\n') if line.strip() != '' and line.strip()[0] != '#' ]
         self.bBackup  = bBackup
 
