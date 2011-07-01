@@ -18,7 +18,7 @@
 +pref("network.http.pipelining.maxrequests", 8);
 +pref("plugin.expose_full_path", true);
 +pref("config.trim_on_minimize", true);
-+pref("extensions.checkCompatibility.3.6", false);  // Bug521905
++//pref("extensions.checkCompatibility.3.6", false);  // Bug521905
 +
 +//http://www.junauza.com/2010/05/hacks-to-make-firefox-faster-than.html
 +pref("nglayout.initialpaint.delay", 0);
