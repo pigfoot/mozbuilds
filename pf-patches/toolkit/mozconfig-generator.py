@@ -28,6 +28,8 @@ class MozGenerator:
         # arch = 1          -> P2: G6-SSE
         # arch = 2          -> P3: G7-SSE2
         #
+        # branch            -> Namoroka/Tumucumaque
+        #
         # locale = 0        -> en_US
         # locale = 1        -> zh_TW
         # locale = 2        -> zh_CN
@@ -45,12 +47,13 @@ class MozGenerator:
         # nightly = 1       -> nightly
         # nightly = 2       -> release
         #
-        self.project=0 ; self.arch=0 ; self.mozlocale=0 ; self.nightly=0
+        self.project=0 ; self.arch=0 ; self.branch=''; self.mozlocale=0 ; self.nightly=0
 
-    def loadConfig(self, project, arch, mozlocale, nightly):
+    def loadConfig(self, project, arch, branch, mozlocale, nightly):
         # Comment me
         _project = str(project).lower();
         _arch = str(arch).lower();
+        _branch = str(branch)
         _mozlocale = str(mozlocale).lower();
         _nightly = str(nightly).lower();
 
@@ -73,6 +76,8 @@ class MozGenerator:
         else:
             print ('<arch> must be p1, p2, or p3!')
             sys.exit(0)
+
+        self.branch = _branch
 
         if _mozlocale == 'en_us':
             self.mozlocale=0
@@ -115,7 +120,6 @@ class MozGenerator:
         print """\
 
 """
-
         if (self.project != 3):
             if (self.project == 1):
                 print '. $topsrcdir/browser/config/mozconfig'
@@ -123,8 +127,6 @@ class MozGenerator:
                 print '. $topsrcdir/mail/config/mozconfig'
 
         print """
-mk_add_options 'PROFILE_GEN_SCRIPT=$(PYTHON) $(OBJDIR)/_profile/pgo/profileserver.py'
-
 ##
 ## CPU Optimization
 ##"""
@@ -137,11 +139,15 @@ mk_add_options 'PROFILE_GEN_SCRIPT=$(PYTHON) $(OBJDIR)/_profile/pgo/profileserve
         for line in _temp_list:
             print line
 
+        print "mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../ff-p%d-opt" % (self.arch + 1)
+        print "mk_add_options PROFILE_GEN_SCRIPT='$(PYTHON) $(MOZ_OBJDIR)/_profile/pgo/profileserver.py'"
+
+
         print """
 #
 # Localized Firefox
-#
-ac_add_options --with-l10n-base=../l10n"""
+#"""
+        print 'ac_add_options --with-l10n-base=../l10n'
         _temp_list = []
         _temp_templ = '#ac_add_options --enable-ui-locale=%s'
         _temp_list.append(_temp_templ % 'zh-TW')
@@ -165,7 +171,13 @@ ac_add_options --with-l10n-base=../l10n"""
 ## Official branding
 ##"""
         print 'ac_add_options --enable-official-branding'
+
+        print """
+##
+## OS related
+##"""
         print '#ac_add_options --with-windows-version=502'
+        print '#WIN32_CRT_SRC_DIR=$VC9DIR/crt/src'
 
         print """
 ##
@@ -173,16 +185,6 @@ ac_add_options --with-l10n-base=../l10n"""
 ##
 ac_add_options --enable-installer
 
-##
-## Static or Dynmatic
-##"""
-        print 'ac_add_options --enable-shared'
-        print 'ac_add_options --disable-static'
-        print '#ac_add_options --enable-static'
-        print '#ac_add_options --disable-shared'
-        print '#ac_add_options --disable-libxul'
-
-        print """
 ##
 ## Synchronize with official build
 ##
@@ -198,37 +200,32 @@ ac_add_options --disable-activex-scripting"""
                 print '#ac_add_options --enable-update-channel=nightly'
 
             if (self.project == 1):
-                print 'ac_add_options --enable-svg'
-                print 'ac_add_options --enable-canvas'
                 print 'ac_add_options --enable-update-packaging'
-        else:
-            print 'ac_add_options --enable-svg'
-            print 'ac_add_options --enable-canvas'
 
         print """
 ##
 ## Other settings
-##
-ac_add_options --enable-jemalloc
-ac_add_options --disable-crashreporter
-ac_add_options --disable-auto-deps
-ac_add_options --disable-debug
-ac_add_options --disable-tests
-"""
+##"""
+        print "ac_add_options --enable-jemalloc"
+        print "ac_add_options --disable-crashreporter"
+        print "ac_add_options --disable-debug"
+        print "ac_add_options --disable-tests"
 
-if (len(sys.argv) < 3) or (len(sys.argv) > 6):
-    print ('Usage: %s <project> <arch> [en_US|zh_TW|zh_CN|ja|de|hu|nl|it|ru|sl|tr] [release|nightly]' % sys.argv[0])
+if (len(sys.argv) < 3) or (len(sys.argv) > 7):
+    print ('Usage: %s <project> <arch> [branch] [en_US|zh_TW|zh_CN|ja|de|hu|nl|it|ru|sl|tr] [release|nightly]' % sys.argv[0])
     sys.exit(0)
 
 if __name__ == '__main__':                  # this way the module can be
     mozgen = MozGenerator()                 # imported by other programs as well
 
     if (len(sys.argv) == 3):
-        mozgen.loadConfig(sys.argv[1], sys.argv[2], 'en_US', 'release')
+        mozgen.loadConfig(sys.argv[1], sys.argv[2], 'Namoroka', 'en_US', 'release')
     elif (len(sys.argv) == 4):
-        mozgen.loadConfig(sys.argv[1], sys.argv[2], sys.argv[3], 'release')
+        mozgen.loadConfig(sys.argv[1], sys.argv[2], sys.argv[3], 'en_US', 'release')
     elif (len(sys.argv) == 5):
-        mozgen.loadConfig(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+        mozgen.loadConfig(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], 'release')
+    elif (len(sys.argv) == 6):
+        mozgen.loadConfig(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
 
     mozgen.generate()
 

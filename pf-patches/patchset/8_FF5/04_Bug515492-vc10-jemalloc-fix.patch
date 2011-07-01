@@ -1,0 +1,540 @@
+diff --git a/config/autoconf.mk.in b/config/autoconf.mk.in
+--- mozilla/config/autoconf.mk.in
++++ mozilla/config/autoconf.mk.in
+@@ -638,16 +638,18 @@ MOZILLA_OFFICIAL = @MOZILLA_OFFICIAL@
+ # Win32 options
+ MOZ_BROWSE_INFO	= @MOZ_BROWSE_INFO@
+ MOZ_TOOLS_DIR	= @MOZ_TOOLS_DIR@
+ MOZ_QUANTIFY	= @MOZ_QUANTIFY@
+ MSMANIFEST_TOOL = @MSMANIFEST_TOOL@
+ WIN32_REDIST_DIR = @WIN32_REDIST_DIR@
+ WIN32_CRT_SRC_DIR = @WIN32_CRT_SRC_DIR@
+ MOZ_MEMORY_LDFLAGS = @MOZ_MEMORY_LDFLAGS@
++WIN32_OLD_STYLE_JEMALLOC = @WIN32_OLD_STYLE_JEMALLOC@
++WIN32_CRT_LIBS = @WIN32_CRT_LIBS@
+ MOZ_CRT_CPU_ARCH = @MOZ_CRT_CPU_ARCH@
+ 
+ # This is for custom CRT building
+ ifdef MOZ_MEMORY
+ ifdef WIN32_CRT_SRC_DIR
+ DLLFLAGS = @DLLFLAGS@
+ endif
+ endif
+diff --git a/config/rules.mk b/config/rules.mk
+--- mozilla/config/rules.mk.BAK 2011-06-24 14:24:45 +0800
++++ mozilla/config/rules.mk     2011-06-30 10:44:01 +0800
+@@ -861,7 +861,9 @@
+ endif
+ else # ! IS_COMPONENT
+ ifneq (,$(filter OS2 WINNT WINCE,$(OS_ARCH)))
++ifndef NO_INSTALL_IMPORT_LIBRARY
+ 	$(INSTALL) $(IFLAGS2) $(IMPORT_LIBRARY) $(DIST)/lib
++endif
+ else
+ 	$(INSTALL) $(IFLAGS2) $(SHARED_LIBRARY) $(DIST)/lib
+ endif
+diff --git a/configure.in b/configure.in
+--- mozilla/configure.in
++++ mozilla/configure.in
+@@ -7471,20 +7471,25 @@ else
+     AC_DEFINE(MOZ_MEMORY_BSD)
+     ;;
+   *-solaris*)
+     AC_DEFINE(MOZ_MEMORY_SOLARIS)
+     ;;
+   *-mingw*)
+     AC_DEFINE(MOZ_MEMORY_WINDOWS)
+     dnl This is sort of awful. Will revisit if we add support for more versions
+-    if test "$CC_VERSION" != "14.00.50727.762" -a "$CC_VERSION" != "15.00.30729.01"; then
+-        AC_MSG_ERROR([Building jemalloc requires exactly Visual C++ 2005 SP1 or 2008 SP1 currently.])
+-    fi
+-    if test -z "$WIN32_CRT_SRC_DIR"; then
++    if test "$CC_VERSION" == "14.00.50727.762" -o "$CC_VERSION" == "15.00.30729.01"; then
++      WIN32_OLD_STYLE_JEMALLOC=1
++    elif test "$CC_VERSION" == "16.00.30319.01" -o "$CC_VERSION" == "16.00.40219.01"; then
++      WIN32_NEW_STYLE_JEMALLOC=1
++      AC_DEFINE(WIN32_NEW_STYLE_JEMALLOC)
++    else        
++      AC_MSG_ERROR([Building jemalloc requires exactly Visual C++ 2005 SP1 or 2008 SP1 or 2010 currently.])
++    fi
++    if test -z "$WIN32_CRT_SRC_DIR" -a -n "$WIN32_OLD_STYLE_JEMALLOC"; then
+       if test -z "$VCINSTALLDIR" -o ! -d "$VCINSTALLDIR"; then
+         AC_MSG_ERROR([When building jemalloc, set WIN32_CRT_SRC_DIR to the path to the Visual C++ CRT source (usually VCINSTALLDIR\crt\src, but VCINSTALLDIR is not set, so I can't autodetect it for you).])
+       else
+         WIN32_CRT_SRC_DIR="$VCINSTALLDIR\crt\src"
+       fi
+     fi
+     dnl cpu check
+     case "${target_cpu}" in
+@@ -7501,13 +7506,22 @@
+ 
+     AC_SUBST(MOZ_CRT_CPU_ARCH)
+ 
+-    if test ! -d "$WIN32_CRT_SRC_DIR"; then
+-      AC_MSG_ERROR([Invalid Win32 CRT source directory: ${WIN32_CRT_SRC_DIR}])
++    if test -n "$WIN32_OLD_STYLE_JEMALLOC"; then
++      if test ! -d "$WIN32_CRT_SRC_DIR"; then
++        AC_MSG_ERROR([Invalid Win32 CRT source directory: ${WIN32_CRT_SRC_DIR}])
++      fi
++      WIN32_CRT_SRC_DIR=`cd "$WIN32_CRT_SRC_DIR" && pwd -W`
++      _objdir_win=`pwd -W`
++      WIN32_CUSTOM_CRT_DIR="$_objdir_win/memory/jemalloc/crtsrc/build/$MOZ_CRT_CPU_ARCH"
++      MOZ_MEMORY_LDFLAGS="-MANIFEST:NO -LIBPATH:\"$WIN32_CUSTOM_CRT_DIR\" -NODEFAULTLIB:msvcrt -NODEFAULTLIB:msvcrtd -NODEFAULTLIB:msvcprt -NODEFAULTLIB:msvcprtd -DEFAULTLIB:mozcrt19 -DEFAULTLIB:mozcpp19"
++    else
++      MOZ_MEMORY_LDFLAGS='-MANIFEST:NO -LIBPATH:$(DIST)/lib -NODEFAULTLIB:msvcrt -NODEFAULTLIB:msvcrtd -NODEFAULTLIB:msvcprt -NODEFAULTLIB:msvcprtd -DEFAULTLIB:mozcrt'
++      if test -z "$MOZ_DEBUG"; then
++        WIN32_CRT_LIBS="msvcrt.lib msvcprt.lib"
++      else
++        WIN32_CRT_LIBS="msvcrtd.lib msvcprtd.lib"
++      fi
+     fi
+-    WIN32_CRT_SRC_DIR=`cd "$WIN32_CRT_SRC_DIR" && pwd -W`
+-    _objdir_win=`pwd -W`
+-    WIN32_CUSTOM_CRT_DIR="$_objdir_win/memory/jemalloc/crtsrc/build/$MOZ_CRT_CPU_ARCH"
+-    MOZ_MEMORY_LDFLAGS="-MANIFEST:NO -LIBPATH:\"$WIN32_CUSTOM_CRT_DIR\" -NODEFAULTLIB:msvcrt -NODEFAULTLIB:msvcrtd -NODEFAULTLIB:msvcprt -NODEFAULTLIB:msvcprtd -DEFAULTLIB:mozcrt19 -DEFAULTLIB:mozcpp19"
+     dnl Also pass this to NSPR/NSS
+     DLLFLAGS="$DLLFLAGS $MOZ_MEMORY_LDFLAGS"
+     export DLLFLAGS
+@@ -7544,6 +7558,8 @@
+ fi
+ AC_SUBST(MOZ_MEMORY)
+ AC_SUBST(MOZ_MEMORY_LDFLAGS)
++AC_SUBST(WIN32_OLD_STYLE_JEMALLOC)
++AC_SUBST(WIN32_CRT_LIBS)
+ AC_SUBST(WIN32_CRT_SRC_DIR)
+ dnl Need to set this for make because NSS doesn't have configure
+ AC_SUBST(DLLFLAGS)
+diff --git a/js/src/config/rules.mk b/js/src/config/rules.mk
+--- mozilla/js/src/config/rules.mk.BAK	2011-06-24 14:25:35 +0800
++++ mozilla/js/src/config/rules.mk	2011-06-30 11:27:10 +0800
+@@ -861,7 +861,9 @@
+ endif
+ else # ! IS_COMPONENT
+ ifneq (,$(filter OS2 WINNT WINCE,$(OS_ARCH)))
++ifndef NO_INSTALL_IMPORT_LIBRARY
+ 	$(INSTALL) $(IFLAGS2) $(IMPORT_LIBRARY) $(DIST)/lib
++endif
+ else
+ 	$(INSTALL) $(IFLAGS2) $(SHARED_LIBRARY) $(DIST)/lib
+ endif
+diff --git a/memory/jemalloc/Makefile.in b/memory/jemalloc/Makefile.in
+--- mozilla/memory/jemalloc/Makefile.in.BAK	2011-06-24 14:26:37 +0800
++++ mozilla/memory/jemalloc/Makefile.in	2011-06-30 18:00:50 +0800
+@@ -50,6 +50,7 @@
+ VISIBILITY_FLAGS=
+ 
+ ifeq (WINNT,$(OS_TARGET))
++ifdef WIN32_OLD_STYLE_JEMALLOC
+ # Building the CRT from source
+ CRT_OBJ_DIR = $(CURDIR)/crtsrc
+ MOZ_CRT_DLL_NAME = mozcrt19
+@@ -107,6 +108,22 @@
+ # but still export jemalloc.h
+ EXPORTS = jemalloc.h jemalloc_types.h
+ 
++else
++
++CSRCS = jemalloc.c
++EXPORTS = jemalloc.h jemalloc_types.h
++LIBRARY_NAME = jemalloc
++FORCE_SHARED_LIB = 1
++
++MOZ_MEMORY_LDFLAGS = # Don't link against ourselves
++
++DEFFILE = $(srcdir)/jemalloc.def
++
++LDFLAGS += -ENTRY:DllMain
++
++NO_INSTALL_IMPORT_LIBRARY = 1
++
++endif
+ else # Not Windows
+ 
+ MODULE_OPTIMIZE_FLAGS = -O2
+@@ -144,3 +161,88 @@
+ ifeq (Darwin,$(OS_TARGET))
+ LDFLAGS += -init _jemalloc_darwin_init
+ endif
++
++ifeq (WINNT,$(OS_TARGET))
++ifndef WIN32_OLD_STYLE_JEMALLOC
++
++# Roll our own custom logic here for the import library
++
++###############################################################################
++#
++# Linking Mozilla itself to jemalloc is not particularly difficult.  To do this
++# we avoid linking directly to the Microsoft-provided CRT import libraries.
++# Instead, we link to our own import library which we generate here.  To
++# replace the CRT's malloc/free/other memory management symbols we export
++# our own versions out of jemalloc.dll.  We then take the import library that
++# the compiler generates for jemalloc.dll and combine it with the MS CRT import
++# libraries.  We put our library on the command line first, and the CRT symbols
++# are discarded in favor of our versions!
++#
++# Unfortunately that was too easy.  The CRT import library is not a standard
++# import library that contains a list of symbols and whatnot.  It also includes
++# object files that are linked into generated programs.  One of these,
++# crtdll.obj is (as one might expect) linked into all DLLs that link against
++# the CRT.  This file does things like run static C++ constructors when the
++# DLL is attached, call DllMain, etc.
++#
++# In the CRT source all malloc/free calls are made to malloc_crt and free_crt.
++# In debug builds these are both defined to malloc_dbg and free_dbg.  In opt
++# builds malloc_crt is an actual function, implemented and exposed from the
++# CRT.  free_crt is, however, defined to be just plain old free.  This works
++# fine inside the CRT where malloc_crt and free operate on the same heap.
++# Outside the CRT malloc_crt is in the CRT's heap, but free is in jemalloc's
++# heap.  This causes much pain at shutdown :-(
++#
++# The obvious solution here is to override malloc_crt too.  Unfortunately,
++# that doesn't work because the CRT expects to be able to call msize on this
++# piece of memory deep inside the CRT, which will fail because it'll call the
++# CRT's msize on a pointer in jemalloc's heap.
++#
++# Our solution to this is quite devious.  We take apart the CRT's import lib
++# and remove the problematic object file.  We then poke at the object file's
++# symbol table and replace '__imp__free' (which means grab free from some
++# other DLL) with '__imp__frex'.  Then we define our own dummy no-op function
++# in jemalloc.dll and export it as frex.  Then we put the CRT import lib
++# back together with the patched crtdll.obj, glue it to the end of jemalloc's
++# import library and link the rest of Mozilla to that.
++#
++# The result?  A binary that uses jemalloc, doesn't crash, and leaks a tiny
++# amount of memory (32 words per DLL in the 2010 CRT) at shutdown.
++#
++###############################################################################
++
++libs:: $(DIST)/lib/mozcrt.lib
++
++$(DIST)/lib/mozcrt.lib:: mozcrt_host.lib
++	$(INSTALL) $(IFLAGS2) mozcrt.lib $(DIST)/lib
++
++# And finally combine that with the jemalloc import library to get an import
++# library that has our malloc/free/etc and the CRT's everything else
++mozcrt_host.lib:: $(IMPORT_LIBRARY) msvc_modified.lib
++	lib -OUT:mozcrt.lib $^
++
++# Put the fixed object file back in
++msvc_modified.lib:: msvc_removed.lib crtdll_fixed.obj
++	lib -OUT:$@ $^
++
++# Fix the object file
++crtdll_fixed.obj:: crtdll.obj
++	$(PYTHON) $(srcdir)/fixcrt.py
++
++# Find the path of crtdll.obj
++CRTDLL_FULLPATH=$(subst \,\\,$(shell lib -list msvc_combined.lib | grep crtdll\\.obj))
++
++# Remove the broken object file, only after we have extracted it
++msvc_removed.lib:: msvc_combined.lib crtdll.obj
++	lib -OUT:$@ msvc_combined.lib -REMOVE:$(CRTDLL_FULLPATH)
++
++# Extract the broken object file out of the combined library
++crtdll.obj:: msvc_combined.lib
++	lib -OUT:$@ $^ -EXTRACT:$(CRTDLL_FULLPATH)
++
++# Grab both CRT libraries and combine them into one library to simplify things
++msvc_combined.lib::
++	lib -OUT:$@ $(WIN32_CRT_LIBS)
++
++endif
++endif
+diff --git a/memory/jemalloc/fixcrt.py b/memory/jemalloc/fixcrt.py
+new file mode 100644
+--- /dev/null
++++ mozilla/memory/jemalloc/fixcrt.py
+@@ -0,0 +1,44 @@
++﻿# ***** BEGIN LICENSE BLOCK *****
++# Version: MPL 1.1/GPL 2.0/LGPL 2.1
++#
++# The contents of this file are subject to the Mozilla Public License Version
++# 1.1 (the "License"); you may not use this file except in compliance with
++# the License. You may obtain a copy of the License at
++# http://www.mozilla.org/MPL/
++#
++# Software distributed under the License is distributed on an "AS IS" basis,
++# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
++# for the specific language governing rights and limitations under the
++# License.
++#
++# The Original Code is Mozilla build system.
++#
++# The Initial Developer of the Original Code is
++# Mozilla Foundation.
++# Portions created by the Initial Developer are Copyright (C) 2011
++# the Initial Developer. All Rights Reserved.
++#
++# Contributor(s):
++#   Kyle Huey <me@kylehuey.com>
++#
++# Alternatively, the contents of this file may be used under the terms of
++# either the GNU General Public License Version 2 or later (the "GPL"), or
++# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
++# in which case the provisions of the GPL or the LGPL are applicable instead
++# of those above. If you wish to allow use of your version of this file only
++# under the terms of either the GPL or the LGPL, and not to allow others to
++# use your version of this file under the terms of the MPL, indicate your
++# decision by deleting the provisions above and replace them with the notice
++# and other provisions required by the GPL or the LGPL. If you do not delete
++# the provisions above, a recipient may use your version of this file under
++# the terms of any one of the MPL, the GPL or the LGPL.
++#
++# ***** END LICENSE BLOCK *****
++
++from __future__ import with_statement
++
++with open('crtdll.obj', 'rb') as infile:
++  data = infile.read()
++  with open('crtdll_fixed.obj', 'wb') as outfile:
++    data = data.replace('__imp__free', '__imp__frex')
++    outfile.write(data)
+diff --git a/memory/jemalloc/jemalloc.c b/memory/jemalloc/jemalloc.c
+--- mozilla/memory/jemalloc/jemalloc.c
++++ mozilla/memory/jemalloc/jemalloc.c
+@@ -208,10 +208,17 @@
+
+ #ifdef MOZ_MEMORY_WINDOWS
+ #ifndef MOZ_MEMORY_WINCE
++/* XXXkhuey switch to not patching the CRT for jemalloc all the time */
++#ifdef OLD_STYLE_JEMALLOC
+ #include <cruntime.h>
+ #include <internal.h>
+ #include <io.h>
+ #else
++/* Some defines from the CRT internal headers that we need here. */
++#define _CRT_SPINCOUNT 5000
++#define __crtInitCritSecAndSpinCount InitializeCriticalSectionAndSpinCount
++#endif
++#else
+ #include <cmnintrin.h>
+ #include <crtdefs.h>
+ #define SIZE_MAX UINT_MAX
+@@ -5823,24 +5830,26 @@ malloc_shutdown()
+ #if defined(MOZ_MEMORY_DARWIN)
+ #define	malloc(a)	moz_malloc(a)
+ #define	valloc(a)	moz_valloc(a)
+ #define	calloc(a, b)	moz_calloc(a, b)
+ #define	realloc(a, b)	moz_realloc(a, b)
+ #define	free(a)		moz_free(a)
+ #endif
+ 
+-#if defined(MOZ_MEMORY_ANDROID) || defined(WRAP_MALLOC)
++#if defined(MOZ_MEMORY_ANDROID) || defined(WRAP_MALLOC) || defined(WIN32_NEW_STYLE_JEMALLOC)
+ inline void sys_free(void* ptr) {return free(ptr);}
+ #define	malloc(a)	je_malloc(a)
+ #define	valloc(a)	je_valloc(a)
+ #define	calloc(a, b)	je_calloc(a, b)
+ #define	realloc(a, b)	je_realloc(a, b)
+ #define	free(a)		je_free(a)
++#define memalign(a, b) je_memalign(a, b)
+ #define posix_memalign(a, b, c)  je_posix_memalign(a, b, c)
++#define malloc_usable_size(a) je_malloc_usable_size(a)
+ 
+ char    *je_strndup(const char *src, size_t len) {
+   char* dst = (char*)je_malloc(len + 1);
+   if(dst)
+     strncpy(dst, src, len + 1);
+   return dst;
+ }
+ char    *je_strdup(const char *src) {
+@@ -6534,8 +6543,64 @@ void *(*__memalign_hook)(size_t alignmen
+ #elif defined(RTLD_DEEPBIND)
+ /*
+  * XXX On systems that support RTLD_GROUP or DF_1_GROUP, do their
+  * implementations permit similar inconsistencies?  Should STV_SINGLETON
+  * visibility be used for interposition where available?
+  */
+ #  error "Interposing malloc is unsafe on this system without libc malloc hooks."
+ #endif
++
++#ifdef WIN32_NEW_STYLE_JEMALLOC
++/*
++ * In the new style jemalloc integration jemalloc is built as a separate
++ * shared library.  Since we're no longer hooking into the CRT binary,
++ * we need to initialize the heap at the first opportunity we get.
++ * DLL_PROCESS_ATTACH in DllMain is that opportunity.
++ */
++BOOL APIENTRY DllMain(HINSTANCE hModule, 
++                      DWORD reason, 
++                      LPVOID lpReserved)
++{
++  switch (reason) {
++    case DLL_PROCESS_ATTACH:
++      /* Don't force the system to page DllMain back in every time
++       * we create/destroy a thread */
++      DisableThreadLibraryCalls(hModule);
++      /* Initialize the heap */
++      malloc_init_hard();
++      break;
++    
++    case DLL_PROCESS_DETACH:
++      break;
++
++  }
++
++  return TRUE;
++}
++
++/*
++ *  There's a fun allocator mismatch in (at least) the VS 2010 CRT
++ *  (see the giant comment in this directory's Makefile.in
++ *  that gets redirected here to avoid a crash on shutdown.
++ */
++void
++je_dumb_free_thunk(void *ptr)
++{
++  return; /* shutdown leaks that we don't care about */
++}
++
++#include <wchar.h>
++
++/*
++ *  We also need to provide our own impl of wcsdup so that we don't ask
++ *  the CRT for memory from its heap (which will then be unfreeable).
++ */
++wchar_t *je_wcsdup(const wchar_t *src)
++{
++  size_t len = wcslen(src);
++  wchar_t* dst = (wchar_t*)je_malloc((len + 1) * sizeof(wchar_t));
++  if(dst)
++    wcsncpy(dst, src, len + 1);
++  return dst;
++}
++
++#endif
+diff --git a/memory/jemalloc/jemalloc.def b/memory/jemalloc/jemalloc.def
+new file mode 100644
+--- /dev/null
++++ mozilla/memory/jemalloc/jemalloc.def
+@@ -0,0 +1,53 @@
++﻿; ***** BEGIN LICENSE BLOCK *****
++; Version: MPL 1.1/GPL 2.0/LGPL 2.1
++;
++; The contents of this file are subject to the Mozilla Public License Version
++; 1.1 (the "License"); you may not use this file except in compliance with
++; the License. You may obtain a copy of the License at
++; http://www.mozilla.org/MPL/
++;
++; Software distributed under the License is distributed on an "AS IS" basis,
++; WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
++; for the specific language governing rights and limitations under the
++; License.
++;
++; The Initial Developer of this code is the Mozilla Foundation
++;
++; Portions created by the Initial Developer are Copyright (C) 2011
++; the Initial Developer. All Rights Reserved.
++;
++; Contributor(s):
++;   Kyle Huey <me@kylehuey.com>
++;
++; Alternatively, the contents of this file may be used under the terms of
++; either of the GNU General Public License Version 2 or later (the "GPL"),
++; or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
++; in which case the provisions of the GPL or the LGPL are applicable instead
++; of those above. If you wish to allow use of your version of this file only
++; under the terms of either the GPL or the LGPL, and not to allow others to
++; use your version of this file under the terms of the MPL, indicate your
++; decision by deleting the provisions above and replace them with the notice
++; and other provisions required by the GPL or the LGPL. If you do not delete
++; the provisions above, a recipient may use your version of this file under
++; the terms of any one of the MPL, the GPL or the LGPL.
++;
++; ***** END LICENSE BLOCK *****
++
++LIBRARY jemalloc.dll
++
++EXPORTS
++  ; symbols that are actually useful
++  malloc=je_malloc
++  valloc=je_valloc
++  calloc=je_calloc
++  realloc=je_realloc
++  free=je_free
++  memalign=je_memalign
++  posix_memalign=je_posix_memalign
++  strndup=je_strndup
++  strdup=je_strdup
++  wcsdup=je_wcsdup
++  malloc_usable_size=je_malloc_usable_size
++  jemalloc_stats
++  ; A hack to work around the CRT (see giant comment in Makefile.in)
++  frex=je_dumb_free_thunk
+diff --git a/memory/jemalloc/jemalloc.h b/memory/jemalloc/jemalloc.h
+--- mozilla/memory/jemalloc/jemalloc.h
++++ mozilla/memory/jemalloc/jemalloc.h
+@@ -45,25 +459,33 @@ extern const char *_malloc_options;
+ void	*malloc(size_t size);
+ void	*valloc(size_t size);
+ void	*calloc(size_t num, size_t size);
+ void	*realloc(void *ptr, size_t size);
+ void	free(void *ptr);
+ int	posix_memalign(void **memptr, size_t alignment, size_t size);
+ #endif /* MOZ_MEMORY_DARWIN, MOZ_MEMORY_LINUX */
+ 
+-#if defined(MOZ_MEMORY_ANDROID) || defined(WRAP_MALLOC)
++#if defined(MOZ_MEMORY_ANDROID) || defined(WRAP_MALLOC) || defined(WIN32_NEW_STYLE_JEMALLOC)
+ void	*je_malloc(size_t size);
+ void	*je_valloc(size_t size);
+ void	*je_calloc(size_t num, size_t size);
+ void	*je_realloc(void *ptr, size_t size);
+ void	je_free(void *ptr);
++#if defined(WIN32_NEW_STYLE_JEMALLOC)
++void *je_memalign(size_t alignment, size_t size);
++#endif
+ int	je_posix_memalign(void **memptr, size_t alignment, size_t size);
+ char    *je_strndup(const char *src, size_t len);
+ char    *je_strdup(const char *src);
++#if defined(MOZ_MEMORY_ANDROID)
++size_t  je_malloc_usable_size(void *ptr);
++#else
++size_t	je_malloc_usable_size(const void *ptr);
++#endif
+ #endif
+ 
+ /* Linux has memalign and malloc_usable_size */
+ #if !defined(MOZ_MEMORY_LINUX)
+ void	*memalign(size_t alignment, size_t size);
+ size_t	malloc_usable_size(const void *ptr);
+ #endif /* MOZ_MEMORY_LINUX */
+ 
+diff --git a/memory/mozalloc/mozalloc.cpp b/memory/mozalloc/mozalloc.cpp
+--- mozilla/memory/mozalloc/mozalloc.cpp
++++ mozilla/memory/mozalloc/mozalloc.cpp
+@@ -78,17 +78,21 @@
+ #include "jemalloc.h"
+ #define malloc(a)     je_malloc(a)
+ #define valloc(a)     je_valloc(a)
+ #define calloc(a, b)  je_calloc(a, b)
+ #define realloc(a, b) je_realloc(a, b)
+ #define free(a)       je_free(a)
+ #define strdup(a)     je_strdup(a)
+ #define strndup(a, b) je_strndup(a, b)
++#if defined(WIN32_NEW_STYLE_JEMALLOC)
++#define memalign(a, b) je_memalign(a, b)
++#endif
+ #define posix_memalign(a, b, c)  je_posix_memalign(a, b, c)
++#define malloc_usable_size(a) je_malloc_usable_size(a)
+ #endif
+ 
+ void
+ moz_free(void* ptr)
+ {
+     free(ptr);
+ }
+ 
+--- mozilla/browser/installer/package-manifest.in.BAK	2011-06-24 18:35:12 +0800
++++ mozilla/browser/installer/package-manifest.in	2011-06-30 14:01:04 +0800
+@@ -81,8 +81,12 @@
+ @BINPATH@/msvcr100.dll
+ #endif
+ #else
++#ifdef WIN32_OLD_STYLE_JEMALLOC
+ @BINPATH@/mozcrt19.dll
+ @BINPATH@/mozcpp19.dll
++#else
++@BINPATH@/jemalloc.dll
++#endif
+ #endif
+ #endif

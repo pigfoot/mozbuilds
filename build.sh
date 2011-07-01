@@ -3,8 +3,9 @@
 #BUILD_ID="BonEcho"
 #BUILD_ID="GranParadiso"
 #BUILD_ID="Shiretoko"
-BUILD_ID="Namoroka"
-#BUILD_ID="Minefield"
+#BUILD_ID="Namoroka"
+#BUILD_ID="Tumucumaque"
+BUILD_ID="FF5"
 
 MozBuilder=$MOZBUILDPFPATCHDIR/toolkit/MozBuilder.py
 

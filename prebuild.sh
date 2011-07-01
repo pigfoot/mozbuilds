@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TAG='FIREFOX_3_6_13_RELEASE'
+TAG='FIREFOX_5_0_RELEASE'
 LOCALES='zh-TW zh-CN ja de fr it ru sl tr'
 
 #FILENAME='TRUNK-source.tar.bz2'
@@ -14,21 +14,27 @@ LOCALES='zh-TW zh-CN ja de fr it ru sl tr'
 #rm -rf mozilla
 #tar jxvf ../${FILENAME}
 
-if [[ -z ${TAG/FIREFOX_3_6_*} ]]; then
+if [[ -z ${TAG/FIREFOX_4_0_*} ]]; then
+    _GECKO_VER="2.0"
+else if [[ -z ${TAG/FIREFOX_3_6_*} ]]; then
     _GECKO_VER="1.9.2"
 else
     _GECKO_VER="1.9.1"
 fi
 
 #hg clone http://hg.mozilla.org/releases/mozilla-${_GECKO_VER} mozilla
+#hg clone http://hg.mozilla.org/mozilla-central mozilla-fx4
 
 #echo "rm -rf l10n ; mkdir l10n ; cd l10n"
 #rm -rf l10n ; mkdir l10n ; cd l10n
 #for loc in ${LOCALES}; do
 #echo "hg clone http://hg.mozilla.org/releases/l10n-mozilla-${_GECKO_VER}/${loc}"
 #hg clone http://hg.mozilla.org/releases/l10n-mozilla-${_GECKO_VER}/${loc}
+#hg clone http://hg.mozilla.org/releases/l10n/mozilla-release/${loc}
 #done
 #cd -
+
+#hg clone http://hg.mozilla.org/releases/mozilla-release mozilla
 
 echo "cd mozilla"
 cd mozilla

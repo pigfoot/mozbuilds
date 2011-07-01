@@ -1,0 +1,24 @@
+--- mozilla/security/nss/lib/ckfw/builtins/certdata.c.BAK	2011-03-10 16:14:29 +0800
++++ mozilla/security/nss/lib/ckfw/builtins/certdata.c	2011-03-30 17:31:32 +0800
+@@ -3812,9 +3812,9 @@
+ , (PRUint32)198 },
+   { (void *)"\002\004\067\112\322\103"
+ , (PRUint32)6 },
+-  { (void *)&ckt_netscape_trusted_delegator, (PRUint32)sizeof(CK_TRUST) },
+-  { (void *)&ckt_netscape_trusted_delegator, (PRUint32)sizeof(CK_TRUST) },
+-  { (void *)&ckt_netscape_trusted_delegator, (PRUint32)sizeof(CK_TRUST) },
++  { (void *)&ckt_netscape_trust_unknown, (PRUint32)sizeof(CK_TRUST) },
++  { (void *)&ckt_netscape_trust_unknown, (PRUint32)sizeof(CK_TRUST) },
++  { (void *)&ckt_netscape_trust_unknown, (PRUint32)sizeof(CK_TRUST) },
+   { (void *)&ck_false, (PRUint32)sizeof(CK_BBOOL) }
+ };
+ static const NSSItem nss_builtins_items_50 [] = {
+@@ -17942,7 +17942,7 @@
+ , (PRUint32)52 },
+   { (void *)"\002\004\111\063\000\001"
+ , (PRUint32)6 },
+-  { (void *)&ckt_netscape_trusted_delegator, (PRUint32)sizeof(CK_TRUST) },
++  { (void *)&ckt_netscape_trust_unknown, (PRUint32)sizeof(CK_TRUST) },
+   { (void *)&ckt_netscape_trust_unknown, (PRUint32)sizeof(CK_TRUST) },
+   { (void *)&ckt_netscape_trust_unknown, (PRUint32)sizeof(CK_TRUST) },
+   { (void *)&ck_false, (PRUint32)sizeof(CK_BBOOL) }
