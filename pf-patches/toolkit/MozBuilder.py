@@ -198,8 +198,6 @@ class MozBuilder:
             os.mkdir(os.path.join(szTargetDir, 'plugins'))
 
         shutil.copy2(os.path.join('..', 'pf-patches', 'plugins', 'np-mswmp.dll'), os.path.join(szTargetDir, 'plugins', 'np-mswmp.dll'))
-        shutil.copy2(os.path.join('..', 'pf-patches', 'plugins', 'NPSWF32.dll'), os.path.join(szTargetDir, 'plugins', 'NPSWF32.dll'))
-        shutil.copy2(os.path.join('..', 'pf-patches', 'plugins', 'flashplayer.xpt'), os.path.join(szTargetDir, 'plugins', 'flashplayer.xpt'))
         shutil.copy2(os.path.join('..', 'pf-patches', 'searchplugins', 'dictionary-com.xml'), os.path.join(szTargetDir, 'searchplugins', 'dictionary-com.xml'))
         shutil.copy2(os.path.join('..', 'pf-patches', 'msvcrt', 'msvcr100.dll'), os.path.join(szTargetDir))
         shutil.copy2(os.path.join('..', 'pf-patches', 'msvcrt', 'msvcp100.dll'), os.path.join(szTargetDir))
