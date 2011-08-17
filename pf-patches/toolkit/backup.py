@@ -105,6 +105,13 @@ class MainImpl:
             SrcExt = '.BAK'
 
         for file in self.fileList:
+            if (bBackup):
+                if (not (os.path.exists(file))):
+                    try:
+                        open(file, 'w').close()
+                    except IOError as (errno, strerror):
+                        print "I/O error({0}): {1}".format(errno, strerror)
+
             if (not (os.path.exists(file + SrcExt))):
                 print 'Warning: [%s] does not exist!' % (file + SrcExt)
             else:

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TAG='FIREFOX_5_0_RELEASE'
+TAG='FIREFOX_5_0_1_RELEASE'
 LOCALES='zh-TW zh-CN ja de fr it ru sl tr'
 
 #FILENAME='TRUNK-source.tar.bz2'
@@ -16,10 +16,12 @@ LOCALES='zh-TW zh-CN ja de fr it ru sl tr'
 
 if [[ -z ${TAG/FIREFOX_4_0_*} ]]; then
     _GECKO_VER="2.0"
-else if [[ -z ${TAG/FIREFOX_3_6_*} ]]; then
+else
+if [[ -z ${TAG/FIREFOX_3_6_*} ]]; then
     _GECKO_VER="1.9.2"
 else
     _GECKO_VER="1.9.1"
+fi
 fi
 
 #hg clone http://hg.mozilla.org/releases/mozilla-${_GECKO_VER} mozilla
@@ -48,14 +50,14 @@ cd -
 echo "cd l10n"
 cd l10n
 for loc in ${LOCALES}; do
-echo "cd ${loc}"
-cd ${loc}
-echo "hg pull -u"
-hg pull -u
-echo "hg update -C ${TAG}"
-hg update -C ${TAG}
-echo "cd -"
-cd -
+    echo "cd ${loc}"
+    cd ${loc}
+    echo "hg pull -u"
+    hg pull -u
+    echo "hg update -C ${TAG}"
+    hg update -C ${TAG}
+    echo "cd -"
+    cd -
 done
 echo "cd .."
 cd ..

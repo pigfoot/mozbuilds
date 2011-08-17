@@ -71,7 +71,7 @@ class MozBuilder:
 
         self.aDictBranch = { \
             'Minefield'     : { 'Ver' : 'Trunk',            'PatchPath': '../pf-patches/patchset/0_Minefield/',    'PatchSet' : self.MinefieldPatchSet    },
-            'FF5'           : { 'Ver' : '5.0-Release',      'PatchPath': '../pf-patches/patchset/8_FF5/',          'PatchSet' : self.FF5PatchSet          },
+            'FF5'           : { 'Ver' : '5.0.1-Release',    'PatchPath': '../pf-patches/patchset/8_FF5/',          'PatchSet' : self.FF5PatchSet          },
             'Namoroka'      : { 'Ver' : '3.6.13-Release',   'PatchPath': '../pf-patches/patchset/6_Namoroka/',     'PatchSet' : self.NamorokaPatchSet     },
             'Shiretoko'     : { 'Ver' : '3.5.7-Release',    'PatchPath': '../pf-patches/patchset/5_Shiretoko/',    'PatchSet' : self.ShiretokoPatchSet    },
             'GranParadiso'  : { 'Ver' : '3.0.14-Release',   'PatchPath': '../pf-patches/patchset/4_GranParadiso/', 'PatchSet' : self.GranParadisoPatchSet },
