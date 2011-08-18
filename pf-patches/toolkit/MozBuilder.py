@@ -33,10 +33,16 @@ class MozBuilder:
         self.MinefieldPatchSet = [
         ]
 
+        self.FF6PatchSet = [
+            '02_tweaks.patch',
+            '03_Bug476766.patch',
+            '04_Bug515492-vc10-jemalloc-fix.patch'    # Bug668151
+        ]
+
         self.FF5PatchSet = [
             '02_tweaks.patch',
             '03_Bug476766.patch',
-            '04_Bug515492-vc10-jemalloc-fix.patch'    # &Bug668151
+            '04_Bug515492-vc10-jemalloc-fix.patch'    # Bug668151
         ]
 
         self.NamorokaPatchSet = [
@@ -70,12 +76,13 @@ class MozBuilder:
         ]
 
         self.aDictBranch = { \
-            'Minefield'     : { 'Ver' : 'Trunk',            'PatchPath': '../pf-patches/patchset/0_Minefield/',    'PatchSet' : self.MinefieldPatchSet    },
-            'FF5'           : { 'Ver' : '5.0.1-Release',    'PatchPath': '../pf-patches/patchset/8_FF5/',          'PatchSet' : self.FF5PatchSet          },
-            'Namoroka'      : { 'Ver' : '3.6.13-Release',   'PatchPath': '../pf-patches/patchset/6_Namoroka/',     'PatchSet' : self.NamorokaPatchSet     },
-            'Shiretoko'     : { 'Ver' : '3.5.7-Release',    'PatchPath': '../pf-patches/patchset/5_Shiretoko/',    'PatchSet' : self.ShiretokoPatchSet    },
-            'GranParadiso'  : { 'Ver' : '3.0.14-Release',   'PatchPath': '../pf-patches/patchset/4_GranParadiso/', 'PatchSet' : self.GranParadisoPatchSet },
-            'BonEcho'       : { 'Ver' : '2.0.0.16-Release', 'PatchPath': '../pf-patches/patchset/3_BonEcho/',      'PatchSet' : self.BonEchoPatchSet      },
+            'Minefield'     : { 'Ver' : 'Trunk',            'PatchVer': 0, 'PatchPath': '../pf-patches/patchset/0_Minefield/',    'PatchSet' : self.MinefieldPatchSet    },
+            'FF6'           : { 'Ver' : '6.0-Release',      'PatchVer': 9, 'PatchPath': '../pf-patches/patchset/9_FF6/',          'PatchSet' : self.FF6PatchSet          },
+            'FF5'           : { 'Ver' : '5.0.1-Release',    'PatchVer': 8, 'PatchPath': '../pf-patches/patchset/8_FF5/',          'PatchSet' : self.FF5PatchSet          },
+            'Namoroka'      : { 'Ver' : '3.6.13-Release',   'PatchVer': 6, 'PatchPath': '../pf-patches/patchset/6_Namoroka/',     'PatchSet' : self.NamorokaPatchSet     },
+            'Shiretoko'     : { 'Ver' : '3.5.7-Release',    'PatchVer': 5, 'PatchPath': '../pf-patches/patchset/5_Shiretoko/',    'PatchSet' : self.ShiretokoPatchSet    },
+            'GranParadiso'  : { 'Ver' : '3.0.14-Release',   'PatchVer': 4, 'PatchPath': '../pf-patches/patchset/4_GranParadiso/', 'PatchSet' : self.GranParadisoPatchSet },
+            'BonEcho'       : { 'Ver' : '2.0.0.16-Release', 'PatchVer': 3, 'PatchPath': '../pf-patches/patchset/3_BonEcho/',      'PatchSet' : self.BonEchoPatchSet      },
         }
 
         self.aDictArch = { \
@@ -128,19 +135,20 @@ class MozBuilder:
             self.system('patch -p0 < %s' % (_Path + 'jemalloc.vc9sp1.patch'))
             self.system('cp -f %s mozilla/memory/jemalloc/' % (_Path + 'crtvc9sp1.diff'))
 
-        # Change icon if not official branding
-        if (not self.bBranding):
-            shutil.copy(os.path.join('..', 'pf-patches', 'branding', 'firefox2005_icon_ico.ico'), os.path.join('mozilla', 'other-licenses', 'branding', 'firefox', 'firefox.ico'))
-            shutil.copy(os.path.join('..', 'pf-patches', 'branding', 'firefox2005_icon_png.png'), os.path.join('mozilla', 'other-licenses', 'branding', 'firefox', 'content', 'about.png'))
+        if (self.aDictBranch[self.szBranch]["PatchVer"] < 9):
+            # Change icon if not official branding
+            if (not self.bBranding and self.aDictBranch[self.szBranch]["PatchVer"] < 9):
+                shutil.copy(os.path.join('..', 'pf-patches', 'branding', 'firefox2005_icon_ico.ico'), os.path.join('mozilla', 'other-licenses', 'branding', 'firefox', 'firefox.ico'))
+                shutil.copy(os.path.join('..', 'pf-patches', 'branding', 'firefox2005_icon_png.png'), os.path.join('mozilla', 'other-licenses', 'branding', 'firefox', 'content', 'about.png'))
 
-        if (szLocale == 'en_US'):
-            self.aDictBranch[self.szBranch]["PatchSet"].append('90_branding.patch')
-        else:
-            self.aDictBranch[self.szBranch]["PatchSet"].append('91_branding_locale.patch')
+            if (szLocale == 'en_US'):
+                self.aDictBranch[self.szBranch]["PatchSet"].append('90_branding.patch')
+            else:
+                self.aDictBranch[self.szBranch]["PatchSet"].append('91_branding_locale.patch')
 
-        # Durty patch to perform dos2unix forcely.
-        if os.path.exists('l10n/it/other-licenses/branding/firefox/brand.dtd.BAK'):
-            self.dos2unix(os.path.join('l10n', 'it', 'other-licenses', 'branding', 'firefox', 'brand.dtd'))
+            # Durty patch to perform dos2unix forcely.
+            if os.path.exists('l10n/it/other-licenses/branding/firefox/brand.dtd.BAK'):
+                self.dos2unix(os.path.join('l10n', 'it', 'other-licenses', 'branding', 'firefox', 'brand.dtd'))
 
         for patch in self.aDictBranch[self.szBranch]["PatchSet"]:
             self.system('patch -p0 < %s' % self.aDictBranch[self.szBranch]["PatchPath"] + patch)

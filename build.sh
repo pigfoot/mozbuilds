@@ -5,7 +5,8 @@
 #BUILD_ID="Shiretoko"
 #BUILD_ID="Namoroka"
 #BUILD_ID="Tumucumaque"
-BUILD_ID="FF5"
+#BUILD_ID="FF5"
+BUILD_ID="FF6"
 
 MozBuilder=$MOZBUILDPFPATCHDIR/toolkit/MozBuilder.py
 
