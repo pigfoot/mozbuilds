@@ -33,6 +33,11 @@ class MozBuilder:
         self.MinefieldPatchSet = [
         ]
 
+        self.FF8PatchSet = [
+            '02_tweaks.patch',
+            '03_Bug476766.patch',
+        ]
+
         self.FF6PatchSet = [
             '02_tweaks.patch',
             '03_Bug476766.patch',
@@ -76,13 +81,14 @@ class MozBuilder:
         ]
 
         self.aDictBranch = { \
-            'Minefield'     : { 'Ver' : 'Trunk',            'PatchVer': 0, 'PatchPath': '../pf-patches/patchset/0_Minefield/',    'PatchSet' : self.MinefieldPatchSet    },
-            'FF6'           : { 'Ver' : '6.0-Release',      'PatchVer': 9, 'PatchPath': '../pf-patches/patchset/9_FF6/',          'PatchSet' : self.FF6PatchSet          },
-            'FF5'           : { 'Ver' : '5.0.1-Release',    'PatchVer': 8, 'PatchPath': '../pf-patches/patchset/8_FF5/',          'PatchSet' : self.FF5PatchSet          },
-            'Namoroka'      : { 'Ver' : '3.6.13-Release',   'PatchVer': 6, 'PatchPath': '../pf-patches/patchset/6_Namoroka/',     'PatchSet' : self.NamorokaPatchSet     },
-            'Shiretoko'     : { 'Ver' : '3.5.7-Release',    'PatchVer': 5, 'PatchPath': '../pf-patches/patchset/5_Shiretoko/',    'PatchSet' : self.ShiretokoPatchSet    },
-            'GranParadiso'  : { 'Ver' : '3.0.14-Release',   'PatchVer': 4, 'PatchPath': '../pf-patches/patchset/4_GranParadiso/', 'PatchSet' : self.GranParadisoPatchSet },
-            'BonEcho'       : { 'Ver' : '2.0.0.16-Release', 'PatchVer': 3, 'PatchPath': '../pf-patches/patchset/3_BonEcho/',      'PatchSet' : self.BonEchoPatchSet      },
+            'Minefield'     : { 'Ver' : 'Trunk',            'PatchVer':  0, 'PatchPath': '../pf-patches/patchset/0_Minefield/',    'PatchSet' : self.MinefieldPatchSet    },
+            'FF8'           : { 'Ver' : '8.0.1-Release',    'PatchVer': 10, 'PatchPath': '../pf-patches/patchset/10_FF8/',         'PatchSet' : self.FF8PatchSet          },
+            'FF6'           : { 'Ver' : '6.0-Release',      'PatchVer':  9, 'PatchPath': '../pf-patches/patchset/9_FF6/',          'PatchSet' : self.FF6PatchSet          },
+            'FF5'           : { 'Ver' : '5.0.1-Release',    'PatchVer':  8, 'PatchPath': '../pf-patches/patchset/8_FF5/',          'PatchSet' : self.FF5PatchSet          },
+            'Namoroka'      : { 'Ver' : '3.6.13-Release',   'PatchVer':  6, 'PatchPath': '../pf-patches/patchset/6_Namoroka/',     'PatchSet' : self.NamorokaPatchSet     },
+            'Shiretoko'     : { 'Ver' : '3.5.7-Release',    'PatchVer':  5, 'PatchPath': '../pf-patches/patchset/5_Shiretoko/',    'PatchSet' : self.ShiretokoPatchSet    },
+            'GranParadiso'  : { 'Ver' : '3.0.14-Release',   'PatchVer':  4, 'PatchPath': '../pf-patches/patchset/4_GranParadiso/', 'PatchSet' : self.GranParadisoPatchSet },
+            'BonEcho'       : { 'Ver' : '2.0.0.16-Release', 'PatchVer':  3, 'PatchPath': '../pf-patches/patchset/3_BonEcho/',      'PatchSet' : self.BonEchoPatchSet      },
         }
 
         self.aDictArch = { \
