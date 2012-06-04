@@ -9,7 +9,8 @@
 #BUILD_ID="FF6"
 #BUILD_ID="FF8"
 #BUILD_ID="FF9"
-BUILD_ID="FF11"
+#BUILD_ID="FF11"
+BUILD_ID="FF13"
 
 MozBuilder=$MOZBUILDPFPATCHDIR/toolkit/MozBuilder.py
 
@@ -34,33 +35,33 @@ $MozBuilder fx ${BUILD_ID} p2 ja branding release public
 $MozBuilder fx ${BUILD_ID} p1 ja branding release public
 
 ##############################################################################################
-$MozBuilder fx ${BUILD_ID} p3 de branding release public
-$MozBuilder fx ${BUILD_ID} p2 de branding release public
-$MozBuilder fx ${BUILD_ID} p1 de branding release public
+#$MozBuilder fx ${BUILD_ID} p3 de branding release public
+#$MozBuilder fx ${BUILD_ID} p2 de branding release public
+#$MozBuilder fx ${BUILD_ID} p1 de branding release public
 
 ##############################################################################################
-$MozBuilder fx ${BUILD_ID} p3 fr branding release public
-$MozBuilder fx ${BUILD_ID} p2 fr branding release public
-$MozBuilder fx ${BUILD_ID} p1 fr branding release public
+#$MozBuilder fx ${BUILD_ID} p3 fr branding release public
+#$MozBuilder fx ${BUILD_ID} p2 fr branding release public
+#$MozBuilder fx ${BUILD_ID} p1 fr branding release public
 
 ##############################################################################################
-$MozBuilder fx ${BUILD_ID} p3 it branding release public
-$MozBuilder fx ${BUILD_ID} p2 it branding release public
-$MozBuilder fx ${BUILD_ID} p1 it branding release public
+#$MozBuilder fx ${BUILD_ID} p3 it branding release public
+#$MozBuilder fx ${BUILD_ID} p2 it branding release public
+#$MozBuilder fx ${BUILD_ID} p1 it branding release public
 
 ##############################################################################################
-$MozBuilder fx ${BUILD_ID} p3 ru branding release public
-$MozBuilder fx ${BUILD_ID} p2 ru branding release public
-$MozBuilder fx ${BUILD_ID} p1 ru branding release public
+#$MozBuilder fx ${BUILD_ID} p3 ru branding release public
+#$MozBuilder fx ${BUILD_ID} p2 ru branding release public
+#$MozBuilder fx ${BUILD_ID} p1 ru branding release public
 
 ##############################################################################################
-$MozBuilder fx ${BUILD_ID} p3 sl branding release public
-$MozBuilder fx ${BUILD_ID} p2 sl branding release public
-$MozBuilder fx ${BUILD_ID} p1 sl branding release public
+#$MozBuilder fx ${BUILD_ID} p3 sl branding release public
+#$MozBuilder fx ${BUILD_ID} p2 sl branding release public
+#$MozBuilder fx ${BUILD_ID} p1 sl branding release public
 
 ##############################################################################################
-$MozBuilder fx ${BUILD_ID} p3 tr branding release public
-$MozBuilder fx ${BUILD_ID} p2 tr branding release public
-$MozBuilder fx ${BUILD_ID} p1 tr branding release public
+#$MozBuilder fx ${BUILD_ID} p3 tr branding release public
+#$MozBuilder fx ${BUILD_ID} p2 tr branding release public
+#$MozBuilder fx ${BUILD_ID} p1 tr branding release public
 
 cd ..
