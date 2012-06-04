@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TAG='FIREFOX_9_0_1_RELEASE'
+TAG='FIREFOX_11_0_RELEASE'
 LOCALES='zh-TW zh-CN ja de fr it ru sl tr'
 
 #FILENAME='TRUNK-source.tar.bz2'

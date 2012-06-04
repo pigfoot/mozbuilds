@@ -33,6 +33,11 @@ class MozBuilder:
         self.MinefieldPatchSet = [
         ]
 
+        self.FF11PatchSet = [
+            '02_tweaks.patch',
+#           '03_Bug476766.patch',
+        ]
+
         self.FF9PatchSet = [
             '02_tweaks.patch',
             '03_Bug476766.patch',
@@ -87,6 +92,7 @@ class MozBuilder:
 
         self.aDictBranch = { \
             'Minefield'     : { 'Ver' : 'Trunk',            'PatchVer':  0, 'PatchPath': '../pf-patches/patchset/0_Minefield/',    'PatchSet' : self.MinefieldPatchSet    },
+            'FF11'          : { 'Ver' : '11.0-Release',     'PatchVer': 12, 'PatchPath': '../pf-patches/patchset/12_FF11/',        'PatchSet' : self.FF11PatchSet          },
             'FF9'           : { 'Ver' : '9.0.1-Release',    'PatchVer': 11, 'PatchPath': '../pf-patches/patchset/11_FF9/',         'PatchSet' : self.FF9PatchSet          },
             'FF8'           : { 'Ver' : '8.0.1-Release',    'PatchVer': 10, 'PatchPath': '../pf-patches/patchset/10_FF8/',         'PatchSet' : self.FF8PatchSet          },
             'FF6'           : { 'Ver' : '6.0-Release',      'PatchVer':  9, 'PatchPath': '../pf-patches/patchset/9_FF6/',          'PatchSet' : self.FF6PatchSet          },
