@@ -1,7 +1,7 @@
 #!/bin/bash
 
-TAG='FIREFOX_13_0_RELEASE'
-LOCALES='zh-TW zh-CN ja de fr it ru sl tr'
+TAG='FIREFOX_13_0_1_RELEASE'
+LOCALES='zh-TW zh-CN ja'
 
 #FILENAME='TRUNK-source.tar.bz2'
 #FILENAME='FIREFOX_3_0_14_RELEASE-source.tar.bz2'
