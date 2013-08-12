@@ -16,7 +16,6 @@
 
 [ui]
 ; editor used to enter commit logs, etc.  Most text editors will work.
-; editor = notepad
 ; show changed files and be a bit more verbose if True
 ; verbose = True
  
@@ -36,13 +35,12 @@
 ;
 [extensions]
 ;acl =
-;alias =
-;bookmarks =
 ;bugzilla =
 ;children =
 ;churn =
-;color =
+color =
 ;convert =
+;eol =
 ;extdiff =
 ;fetch =
 ;gpg =
@@ -50,54 +48,38 @@ graphlog =
 ;hgcia =
 ;hgk =
 ;highlight = 
+;histedit =
 ;interhg =
+;largefiles =
 ;keyword =
 mq =
 ;notify =
-;pager =
-;parentrevspec =
+pager =
 ;patchbomb =
 ;progress =
-;purge =
-;rebase =
+purge =
+rebase =
 ;record =
-;transplant =
+;relink =
+;schemes =
+;share =
+transplant =
 ;win32mbcs =
-;win32text =
 ;zeroconf =
 
 [defaults]
 diff =-p -U 8
 
-; To use cleverencode/cleverdecode, you must enable win32text extension
+[color]
+mode = ansi
 
-[encode]
-; Encode files that don't contain NUL characters.
+[pager]
+pager = less.exe -mnFRSXQ
+quiet = True
+attend = diff,status,log,qdiff,blame,annotate,pdiff,glog,show,qseries
 
-; ** = cleverencode:
-
-; Alternatively, you can explicitly specify each file extension that
-; you want encoded (any you omit will be left untouched), like this:
-
-; *.txt = dumbencode:
-
-
-[decode]
-; Decode files that don't contain NUL characters.
-
-; ** = cleverdecode:
-
-; Alternatively, you can explicitly specify each file extension that
-; you want decoded (any you omit will be left untouched), like this:
-
-; **.txt = dumbdecode:
-
-[patch]
-; If you enable win32text filtering, you will want to enable this
-; line as well to allow patching to work correctly.
-
-; eol = crlf
-
+[alias]
+show = log --patch --verbose --rev
 
 ;
 ; Define external diff commands
@@ -106,7 +88,7 @@ diff =-p -U 8
 ;cmd.bc3diff = C:\Program Files\Beyond Compare 3\BCompare.exe
 ;cmd.vdiff = C:\Progra~1\TortoiseSVN\bin\TortoiseMerge.exe
 ;cmd.vimdiff = gvim.exe
-;opts.vimdiff = -f '+next' '+execute "DirDiff ".argv(0)." ".argv(1)'
+;opts.vimdiff = -f "+next" "+execute 'DirDiff' fnameescape(argv(0)) fnameescape(argv(1))"
 
 
 [hgk]

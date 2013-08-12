@@ -1,5 +1,6 @@
 @echo off
 
+SETLOCAL
 SET MOZ_MSVCVERSION=9
 SET MOZBUILDDIR=%~dp0
 SET MOZILLABUILD=%MOZBUILDDIR%
@@ -29,7 +30,13 @@ if "%VC9DIR%"=="" (
     )
 
     rem Prepend MSVC paths
-    call "%VC9EXPRESSDIR%\Bin\vcvars32.bat"
+    call "%VC9EXPRESSDIR%\Bin\vcvars32.bat" 2>nul
+    if "%DevEnvDir%"=="" (
+      rem Might be using a compiler that shipped with an SDK, so manually set paths
+      SET "PATH=%VC9EXPRESSDIR%\Bin;%VC9EXPRESSDIR%\..\Common7\IDE;%PATH%"
+      SET "INCLUDE=%VC9EXPRESSDIR%\Include;%VC9EXPRESSDIR%\Include\Sys;%INCLUDE%"
+      SET "LIB=%VC9EXPRESSDIR%\Lib;%LIB%"
+    )
 
     rem Don't set SDK paths in this block, because blocks are early-evaluated.
 
@@ -84,4 +91,6 @@ if "%VC9DIR%"=="" (
     )
 )
 
-start /d "%USERPROFILE%" "" "%MOZILLABUILD%"\msys\bin\bash --login -i
+cd "%USERPROFILE%"
+
+"%MOZILLABUILD%\msys\bin\bash" --login -i

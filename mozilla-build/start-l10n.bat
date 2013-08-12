@@ -1,5 +1,6 @@
 @echo off
 
+SETLOCAL
 SET MOZILLABUILDDRIVE=%~d0%
 SET MOZILLABUILDPATH=%~p0%
 SET MOZILLABUILD=%MOZILLABUILDDRIVE%%MOZILLABUILDPATH%
@@ -12,4 +13,5 @@ set MOZ_TOOLS=%MOZILLABUILD%\moztools
 rem append moztools to PATH
 SET PATH=%PATH%;%MOZ_TOOLS%\bin
 
-start /d "%USERPROFILE%" "" "%MOZILLABUILD%"\msys\bin\bash --login -i
+cd "%USERPROFILE%"
+%MOZILLABUILD%\msys\bin\bash --login -i

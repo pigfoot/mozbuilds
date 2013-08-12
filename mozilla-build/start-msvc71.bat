@@ -1,5 +1,6 @@
 @echo off
 
+SETLOCAL
 SET MOZ_MSVCVERSION=7.1
 SET MOZBUILDDIR=%~dp0
 SET MOZILLABUILD=%MOZBUILDDIR%
@@ -47,4 +48,5 @@ if defined MOZBUILD_USE_SDK (
     )
 )
 
-start /d "%USERPROFILE%" "" "%MOZILLABUILD%"\msys\bin\bash --login -i
+cd "%USERPROFILE%"
+"%MOZILLABUILD%\msys\bin\bash" --login -i

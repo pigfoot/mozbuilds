@@ -6,18 +6,29 @@ parts of the grammar we've changed, we also make sure we can parse the
 test_grammar.py files from both Python 2 and Python 3.
 """
 
+from __future__ import with_statement
+
 # Testing imports
 from . import support
 from .support import driver, test_dir
 
 # Python imports
 import os
-import io
 import sys
 
 # Local imports
 from lib2to3.pgen2 import tokenize
 from ..pgen2.parse import ParseError
+from lib2to3.pygram import python_symbols as syms
+
+
+class TestDriver(support.TestCase):
+
+    def test_formfeed(self):
+        s = """print 1\n\x0Cprint 2\n"""
+        t = driver.parse_string(s)
+        self.assertEqual(t.children[0].children[0].type, syms.print_stmt)
+        self.assertEqual(t.children[1].children[0].type, syms.print_stmt)
 
 
 class GrammarTest(support.TestCase):
@@ -156,8 +167,9 @@ class TestParserIdempotency(support.TestCase):
                 encoding = tokenize.detect_encoding(fp.readline)[0]
             self.assertTrue(encoding is not None,
                             "can't detect encoding for %s" % filepath)
-            with io.open(filepath, "r", encoding=encoding) as fp:
+            with open(filepath, "r") as fp:
                 source = fp.read()
+                source = source.decode(encoding)
             tree = driver.parse_string(source)
             new = unicode(tree)
             if diff(filepath, new, encoding):
@@ -203,12 +215,13 @@ class TestLiterals(GrammarTest):
 
 
 def diff(fn, result, encoding):
-    f = io.open("@", "w", encoding=encoding)
+    f = open("@", "w")
     try:
-        f.write(result)
+        f.write(result.encode(encoding))
     finally:
         f.close()
     try:
-        return os.system("diff -u %r @" % fn)
+        fn = fn.replace('"', '\\"')
+        return os.system('diff -u "%s" @' % fn)
     finally:
         os.remove("@")

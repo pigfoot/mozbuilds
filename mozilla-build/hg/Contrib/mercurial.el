@@ -15,8 +15,7 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with mercurial.el, GNU Emacs, or XEmacs; see the file COPYING
-;; (`C-h C-l').  If not, write to the Free Software Foundation, Inc.,
-;; 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+;; (`C-h C-l').  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -145,7 +144,7 @@ repository-related commands."
   :type 'string
   :group 'mercurial)
 
-(defcustom hg-outgoing-repository "default-push"
+(defcustom hg-outgoing-repository ""
   "The repository to which changes are pushed to by default.
 This should be a symbolic repository name, since it is used for all
 repository-related commands."
@@ -462,7 +461,7 @@ Each key is of the form (section . name)."
 (defun hg-complete-repo (string predicate all)
   "Attempt to complete a repository name.
 We complete on either symbolic names from Mercurial's config or real
-directory names from the file system.  We do not penalise URLs."
+directory names from the file system.  We do not penalize URLs."
   (or (if all
 	  (all-completions string hg-repo-completion-table predicate)
 	(try-completion string hg-repo-completion-table predicate))

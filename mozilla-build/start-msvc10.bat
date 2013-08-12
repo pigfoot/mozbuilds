@@ -1,5 +1,6 @@
 @echo off
 
+SETLOCAL
 SET MOZ_MSVCVERSION=10
 SET MOZBUILDDIR=%~dp0
 SET MOZILLABUILD=%MOZBUILDDIR%
@@ -29,7 +30,13 @@ if "%VC10DIR%"=="" (
     )
 
     rem Prepend MSVC paths
-    call "%VC10EXPRESSDIR%\Bin\vcvars32.bat"
+    call "%VC10EXPRESSDIR%\Bin\vcvars32.bat" 2>nul
+    if "%DevEnvDir%"=="" (
+      rem Might be using a compiler that shipped with an SDK, so manually set paths
+      SET "PATH=%VC10EXPRESSDIR%\Bin;%VC10EXPRESSDIR%\..\Common7\IDE;%PATH%"
+      SET "INCLUDE=%VC10EXPRESSDIR%\Include;%VC10EXPRESSDIR%\Include\Sys;%INCLUDE%"
+      SET "LIB=%VC10EXPRESSDIR%\Lib;%LIB%"
+    )
 
     rem Don't set SDK paths in this block, because blocks are early-evaluated.
 
@@ -48,10 +55,24 @@ if "%VC10DIR%"=="" (
         )
     )
 ) else (
-    rem Prepend MSVC paths
-    rem The Win7 SDK (or newer) should automatically integrate itself into vcvars32.bat
-    ECHO Using VC 2010 built-in SDK
-    call "%VC10DIR%\Bin\vcvars32.bat"
+    if "%SDKVER%"=="8" (
+      rem For VS 2010 with the 8.0 SDK, setup the VC 2010 env and then manually add sdk path info. below.
+      call "%VC10DIR%\Bin\vcvars32.bat"
+    ) else (
+      rem Prepend MSVC paths
+      rem The Win7 SDK (or newer) should automatically integrate itself into vcvars32.bat
+      ECHO Using VC 2010 built-in SDK
+      call "%VC10DIR%\Bin\vcvars32.bat"
+    )
+)
+
+rem The call to VS 2010 vcvars32 adds 7.x SDK paths, so prepend the 8.0 kit to give it priority
+if "%SDKVER%"=="8" (
+  ECHO Using the Windows 8.0 Developer Kit
+  set "PATH=%SDKDIR%bin\x86;%PATH%"
+  set "LIB=%SDKDIR%Lib\win8\um\x86;%LIB%"
+  set "LIBPATH=%SDKDIR%Lib\win8\um\x86;%LIBPATH%"
+  set "INCLUDE=%SDKDIR%Include\shared;%SDKDIR%Include\um;%SDKDIR%Include\winrt;%SDKDIR%Include\winrt\wrl;%SDKDIR%Include\winrt\wrl\wrappers;%INCLUDE%"
 )
 
 if "%VC10DIR%"=="" (
@@ -76,4 +97,6 @@ if "%VC10DIR%"=="" (
     )
 )
 
-start /d "%USERPROFILE%" "" "%MOZILLABUILD%"\msys\bin\bash --login -i
+cd "%USERPROFILE%"
+
+"%MOZILLABUILD%\msys\bin\bash" --login -i

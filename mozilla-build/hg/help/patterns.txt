@@ -6,6 +6,10 @@ patterns.
 
 Alternate pattern notations must be specified explicitly.
 
+.. note::
+  Patterns specified in ``.hgignore`` are not rooted. 
+  Please see :hg:`help hgignore` for details.
+
 To use a plain path name without any pattern matching, start it with
 ``path:``. These path names must completely match starting at the
 current repository root.
@@ -19,6 +23,11 @@ across path separators and ``{a,b}`` to mean "a or b".
 
 To use a Perl/Python regular expression, start a name with ``re:``.
 Regexp pattern matching is anchored at the root of the repository.
+
+To read name patterns from a file, use ``listfile:`` or ``listfile0:``.
+The latter expects null delimited patterns while the former expects line
+feeds. Each string read from the file is itself treated as a file
+pattern.
 
 Plain examples::
 
@@ -39,3 +48,10 @@ Glob examples::
 Regexp examples::
 
   re:.*\.c$      any name ending in ".c", anywhere in the repository
+
+File examples::
+
+  listfile:list.txt  read list from list.txt with one file pattern per line
+  listfile0:list.txt read list from list.txt with null byte delimiters
+
+See also :hg:`help filesets`.

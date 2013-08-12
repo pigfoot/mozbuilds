@@ -1,31 +1,41 @@
 {header}
 <title>{repo|escape}: branches</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-tags" title="Atom feed for {repo|escape}: branches" />
+   href="{url|urlescape}atom-branches" title="Atom feed for {repo|escape}: branches" />
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-tags" title="RSS feed for {repo|escape}: branches" />
+   href="{url|urlescape}rss-branches" title="RSS feed for {repo|escape}: branches" />
 </head>
 <body>
 
 <div class="container">
 <div class="menu">
 <div class="logo">
-<a href="http://mercurial.selenic.com/">
-<img src="{staticurl}hglogo.png" alt="mercurial" /></a>
+<a href="{logourl}">
+<img src="{staticurl|urlescape}{logoimg}" alt="mercurial" /></a>
 </div>
 <ul>
-<li><a href="{url}shortlog{sessionvars%urlparameter}">log</a></li>
-<li><a href="{url}graph{sessionvars%urlparameter}">graph</a></li>
-<li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
+<li><a href="{url|urlescape}shortlog{sessionvars%urlparameter}">log</a></li>
+<li><a href="{url|urlescape}graph{sessionvars%urlparameter}">graph</a></li>
+<li><a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a></li>
+<li><a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
 <li class="active">branches</li>
 </ul>
+<ul>
+ <li><a href="{url|urlescape}help{sessionvars%urlparameter}">help</a></li>
+</ul>
+<p>
+<div class="atom-logo">
+<a href="{url|urlescape}atom-branches" title="subscribe to atom feed">
+<img class="atom-logo" src="{staticurl|urlescape}feed-icon-14x14.png" alt="atom feed">
+</a>
+</div>
 </div>
 
 <div class="main">
-<h2><a href="{url}{sessionvars%urlparameter}">{repo|escape}</a></h2>
+<h2 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb}</h2>
 <h3>branches</h3>
 
-<form class="search" action="{url}log">
+<form class="search" action="{url|urlescape}log">
 {sessionvars%hiddenformentry}
 <p><input name="rev" id="search1" type="text" size="30" /></p>
 <div id="hint">find changesets by author, revision,
@@ -37,7 +47,18 @@ files, or words in the commit message</div>
  <th>branch</th>
  <th>node</th>
 </tr>
-{entries%branchentry}
+{entries %
+' <tr class="tagEntry parity{parity}">
+    <td>
+      <a href="{url|urlescape}shortlog/{node|short}{sessionvars%urlparameter}" class="{status}">
+        {branch|escape}
+      </a>
+    </td>
+    <td class="node">
+      {node|short}
+    </td>
+  </tr>'
+}
 </table>
 </div>
 </div>

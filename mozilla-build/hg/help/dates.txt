@@ -23,14 +23,14 @@ Lastly, there is Mercurial's internal format:
 
 - ``1165432709 0`` (Wed Dec 6 13:18:29 2006 UTC)
 
-This is the internal representation format for dates. unixtime is the
-number of seconds since the epoch (1970-01-01 00:00 UTC). offset is
-the offset of the local timezone, in seconds west of UTC (negative if
-the timezone is east of UTC).
+This is the internal representation format for dates. The first number
+is the number of seconds since the epoch (1970-01-01 00:00 UTC). The
+second is the offset of the local timezone, in seconds west of UTC
+(negative if the timezone is east of UTC).
 
 The log command also accepts date ranges:
 
-- ``<{datetime}`` - at or before a given date/time
-- ``>{datetime}`` - on or after a given date/time
-- ``{datetime} to {datetime}`` - a date range, inclusive
-- ``-{days}`` - within a given number of days of today
+- ``<DATE`` - at or before a given date/time
+- ``>DATE`` - on or after a given date/time
+- ``DATE to DATE`` - a date range, inclusive
+- ``-DAYS`` - within a given number of days of today

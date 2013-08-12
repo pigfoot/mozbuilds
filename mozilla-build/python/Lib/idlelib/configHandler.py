@@ -20,7 +20,7 @@ configuration problem notification and resolution.
 import os
 import sys
 import string
-import macosxSupport
+from idlelib import macosxSupport
 from ConfigParser import ConfigParser, NoOptionError, NoSectionError
 
 class InvalidConfigType(Exception): pass
@@ -237,24 +237,39 @@ class IdleConf:
         printed to stderr.
 
         """
-        if self.userCfg[configType].has_option(section,option):
-            return self.userCfg[configType].Get(section, option,
-                                                type=type, raw=raw)
-        elif self.defaultCfg[configType].has_option(section,option):
-            return self.defaultCfg[configType].Get(section, option,
-                                                   type=type, raw=raw)
-        else: #returning default, print warning
-            if warn_on_default:
-                warning = ('\n Warning: configHandler.py - IdleConf.GetOption -\n'
-                           ' problem retrieving configration option %r\n'
-                           ' from section %r.\n'
-                           ' returning default value: %r\n' %
-                           (option, section, default))
-                try:
-                    sys.stderr.write(warning)
-                except IOError:
-                    pass
-            return default
+        try:
+            if self.userCfg[configType].has_option(section,option):
+                return self.userCfg[configType].Get(section, option,
+                                                    type=type, raw=raw)
+        except ValueError:
+            warning = ('\n Warning: configHandler.py - IdleConf.GetOption -\n'
+                       ' invalid %r value for configuration option %r\n'
+                       ' from section %r: %r\n' %
+                       (type, option, section,
+                        self.userCfg[configType].Get(section, option,
+                                                     raw=raw)))
+            try:
+                sys.stderr.write(warning)
+            except IOError:
+                pass
+        try:
+            if self.defaultCfg[configType].has_option(section,option):
+                return self.defaultCfg[configType].Get(section, option,
+                                                       type=type, raw=raw)
+        except ValueError:
+            pass
+        #returning default, print warning
+        if warn_on_default:
+            warning = ('\n Warning: configHandler.py - IdleConf.GetOption -\n'
+                       ' problem retrieving configuration option %r\n'
+                       ' from section %r.\n'
+                       ' returning default value: %r\n' %
+                       (option, section, default))
+            try:
+                sys.stderr.write(warning)
+            except IOError:
+                pass
+        return default
 
     def SetOption(self, configType, section, option, value):
         """In user's config file, set section's option to value.
@@ -595,7 +610,7 @@ class IdleConf:
             '<<replace>>': ['<Control-h>'],
             '<<goto-line>>': ['<Alt-g>'],
             '<<smart-backspace>>': ['<Key-BackSpace>'],
-            '<<newline-and-indent>>': ['<Key-Return> <Key-KP_Enter>'],
+            '<<newline-and-indent>>': ['<Key-Return>', '<Key-KP_Enter>'],
             '<<smart-indent>>': ['<Key-Tab>'],
             '<<indent-region>>': ['<Control-Key-bracketright>'],
             '<<dedent-region>>': ['<Control-Key-bracketleft>'],
@@ -654,16 +669,8 @@ class IdleConf:
                 helpPath=value[1].strip()
             if menuItem and helpPath: #neither are empty strings
                 helpSources.append( (menuItem,helpPath,option) )
-        helpSources.sort(self.__helpsort)
+        helpSources.sort(key=lambda x: int(x[2]))
         return helpSources
-
-    def __helpsort(self, h1, h2):
-        if int(h1[2]) < int(h2[2]):
-            return -1
-        elif int(h1[2]) > int(h2[2]):
-            return 1
-        else:
-            return 0
 
     def GetAllExtraHelpSourcesList(self):
         """

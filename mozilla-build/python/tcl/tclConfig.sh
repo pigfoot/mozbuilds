@@ -57,11 +57,11 @@ TCL_LIBS='kernel32.lib user32.lib ws2_32.lib'
 
 # Top-level directory in which Tcl's platform-independent files are
 # installed.
-TCL_PREFIX='C:\loewis\26\tcltk'
+TCL_PREFIX='C:\Users\martin\32\tcltk'
 
 # Top-level directory in which Tcl's platform-specific files (e.g.
 # executables) are installed.
-TCL_EXEC_PREFIX='C:\loewis\26\tcltk\bin'
+TCL_EXEC_PREFIX='C:\Users\martin\32\tcltk\bin'
 
 # Flags to pass to cc when compiling the components of a shared library:
 TCL_SHLIB_CFLAGS=''
@@ -116,11 +116,11 @@ TCL_BUILD_LIB_SPEC=''
 
 # String to pass to linker to pick up the Tcl library from its
 # installed directory.
-TCL_LIB_SPEC='C:\loewis\26\tcltk\lib\tcl85.lib'
+TCL_LIB_SPEC='C:\Users\martin\32\tcltk\lib\tcl85.lib'
 
 # String to pass to the compiler so that an extension can
 # find installed Tcl headers.
-TCL_INCLUDE_SPEC='-IC:\loewis\26\tcltk\include'
+TCL_INCLUDE_SPEC='-IC:\Users\martin\32\tcltk\include'
 
 # Indicates whether a version numbers should be used in -l switches
 # ("ok" means it's safe to use switches like -ltcl7.5;  "nodots" means
@@ -169,13 +169,13 @@ TCL_BUILD_STUB_LIB_SPEC='-L.\Release_X86_VC9 tclstub85.lib'
 
 # String to pass to linker to pick up the Tcl stub library from its
 # installed directory.
-TCL_STUB_LIB_SPEC='-LC:\loewis\26\tcltk\lib tclstub85.lib'
+TCL_STUB_LIB_SPEC='-LC:\Users\martin\32\tcltk\lib tclstub85.lib'
 
 # Path to the Tcl stub library in the build directory.
 TCL_BUILD_STUB_LIB_PATH='.\Release_X86_VC9\tclstub85.lib'
 
 # Path to the Tcl stub library in the install directory.
-TCL_STUB_LIB_PATH='C:\loewis\26\tcltk\lib\tclstub85.lib'
+TCL_STUB_LIB_PATH='C:\Users\martin\32\tcltk\lib\tclstub85.lib'
 
 # Flag, 1: we built Tcl with threads enables, 0 we didn't
 TCL_THREADS=0

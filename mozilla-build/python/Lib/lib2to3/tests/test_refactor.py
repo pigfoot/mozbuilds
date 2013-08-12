@@ -2,6 +2,8 @@
 Unit tests for refactor.py.
 """
 
+from __future__ import with_statement
+
 import sys
 import os
 import codecs
@@ -51,6 +53,12 @@ class TestRefactoringTool(unittest.TestCase):
         self.assertTrue(rt.driver.grammar is
                         pygram.python_grammar_no_print_statement)
 
+    def test_write_unchanged_files_option(self):
+        rt = self.rt()
+        self.assertFalse(rt.write_unchanged_files)
+        rt = self.rt({"write_unchanged_files" : True})
+        self.assertTrue(rt.write_unchanged_files)
+
     def test_fixer_loading_helpers(self):
         contents = ["explicit", "first", "last", "parrot", "preorder"]
         non_prefixed = refactor.get_all_fix_names("myfixes")
@@ -61,42 +69,50 @@ class TestRefactoringTool(unittest.TestCase):
         self.assertEqual(full_names,
                          ["myfixes.fix_" + name for name in contents])
 
-    def test_detect_future_print(self):
-        run = refactor._detect_future_print
-        self.assertFalse(run(""))
-        self.assertTrue(run("from __future__ import print_function"))
-        self.assertFalse(run("from __future__ import generators"))
-        self.assertFalse(run("from __future__ import generators, feature"))
-        input = "from __future__ import generators, print_function"
-        self.assertTrue(run(input))
-        input ="from __future__ import print_function, generators"
-        self.assertTrue(run(input))
-        input = "from __future__ import (print_function,)"
-        self.assertTrue(run(input))
-        input = "from __future__ import (generators, print_function)"
-        self.assertTrue(run(input))
-        input = "from __future__ import (generators, nested_scopes)"
-        self.assertFalse(run(input))
-        input = """from __future__ import generators
+    def test_detect_future_features(self):
+        run = refactor._detect_future_features
+        fs = frozenset
+        empty = fs()
+        self.assertEqual(run(""), empty)
+        self.assertEqual(run("from __future__ import print_function"),
+                         fs(("print_function",)))
+        self.assertEqual(run("from __future__ import generators"),
+                         fs(("generators",)))
+        self.assertEqual(run("from __future__ import generators, feature"),
+                         fs(("generators", "feature")))
+        inp = "from __future__ import generators, print_function"
+        self.assertEqual(run(inp), fs(("generators", "print_function")))
+        inp ="from __future__ import print_function, generators"
+        self.assertEqual(run(inp), fs(("print_function", "generators")))
+        inp = "from __future__ import (print_function,)"
+        self.assertEqual(run(inp), fs(("print_function",)))
+        inp = "from __future__ import (generators, print_function)"
+        self.assertEqual(run(inp), fs(("generators", "print_function")))
+        inp = "from __future__ import (generators, nested_scopes)"
+        self.assertEqual(run(inp), fs(("generators", "nested_scopes")))
+        inp = """from __future__ import generators
 from __future__ import print_function"""
-        self.assertTrue(run(input))
-        self.assertFalse(run("from"))
-        self.assertFalse(run("from 4"))
-        self.assertFalse(run("from x"))
-        self.assertFalse(run("from x 5"))
-        self.assertFalse(run("from x im"))
-        self.assertFalse(run("from x import"))
-        self.assertFalse(run("from x import 4"))
-        input = "'docstring'\nfrom __future__ import print_function"
-        self.assertTrue(run(input))
-        input = "'docstring'\n'somng'\nfrom __future__ import print_function"
-        self.assertFalse(run(input))
-        input = "# comment\nfrom __future__ import print_function"
-        self.assertTrue(run(input))
-        input = "# comment\n'doc'\nfrom __future__ import print_function"
-        self.assertTrue(run(input))
-        input = "class x: pass\nfrom __future__ import print_function"
-        self.assertFalse(run(input))
+        self.assertEqual(run(inp), fs(("generators", "print_function")))
+        invalid = ("from",
+                   "from 4",
+                   "from x",
+                   "from x 5",
+                   "from x im",
+                   "from x import",
+                   "from x import 4",
+                   )
+        for inp in invalid:
+            self.assertEqual(run(inp), empty)
+        inp = "'docstring'\nfrom __future__ import print_function"
+        self.assertEqual(run(inp), fs(("print_function",)))
+        inp = "'docstring'\n'somng'\nfrom __future__ import print_function"
+        self.assertEqual(run(inp), empty)
+        inp = "# comment\nfrom __future__ import print_function"
+        self.assertEqual(run(inp), fs(("print_function",)))
+        inp = "# comment\n'doc'\nfrom __future__ import print_function"
+        self.assertEqual(run(inp), fs(("print_function",)))
+        inp = "class x: pass\nfrom __future__ import print_function"
+        self.assertEqual(run(inp), empty)
 
     def test_get_headnode_dict(self):
         class NoneFix(fixer_base.BaseFix):
@@ -166,28 +182,58 @@ from __future__ import print_function"""
                     "<stdin>", False]
         self.assertEqual(results, expected)
 
-    def check_file_refactoring(self, test_file, fixers=_2TO3_FIXERS):
+    def check_file_refactoring(self, test_file, fixers=_2TO3_FIXERS,
+                               options=None, mock_log_debug=None,
+                               actually_write=True):
+        tmpdir = tempfile.mkdtemp(prefix="2to3-test_refactor")
+        self.addCleanup(shutil.rmtree, tmpdir)
+        # make a copy of the tested file that we can write to
+        shutil.copy(test_file, tmpdir)
+        test_file = os.path.join(tmpdir, os.path.basename(test_file))
+        os.chmod(test_file, 0o644)
+
         def read_file():
             with open(test_file, "rb") as fp:
                 return fp.read()
+
         old_contents = read_file()
-        rt = self.rt(fixers=fixers)
+        rt = self.rt(fixers=fixers, options=options)
+        if mock_log_debug:
+            rt.log_debug = mock_log_debug
 
         rt.refactor_file(test_file)
         self.assertEqual(old_contents, read_file())
 
-        try:
-            rt.refactor_file(test_file, True)
-            new_contents = read_file()
-            self.assertNotEqual(old_contents, new_contents)
-        finally:
-            with open(test_file, "wb") as fp:
-                fp.write(old_contents)
+        if not actually_write:
+            return
+        rt.refactor_file(test_file, True)
+        new_contents = read_file()
+        self.assertNotEqual(old_contents, new_contents)
         return new_contents
 
     def test_refactor_file(self):
         test_file = os.path.join(FIXER_DIR, "parrot_example.py")
         self.check_file_refactoring(test_file, _DEFAULT_FIXERS)
+
+    def test_refactor_file_write_unchanged_file(self):
+        test_file = os.path.join(FIXER_DIR, "parrot_example.py")
+        debug_messages = []
+        def recording_log_debug(msg, *args):
+            debug_messages.append(msg % args)
+        self.check_file_refactoring(test_file, fixers=(),
+                                    options={"write_unchanged_files": True},
+                                    mock_log_debug=recording_log_debug,
+                                    actually_write=False)
+        # Testing that it logged this message when write=False was passed is
+        # sufficient to see that it did not bail early after "No changes".
+        message_regex = r"Not writing changes to .*%s%s" % (
+                os.sep, os.path.basename(test_file))
+        for message in debug_messages:
+            if "Not writing changes" in message:
+                self.assertRegexpMatches(message, message_regex)
+                break
+        else:
+            self.fail("%r not matched in %r" % (message_regex, debug_messages))
 
     def test_refactor_dir(self):
         def check(structure, expected):
@@ -213,6 +259,7 @@ from __future__ import print_function"""
                 "hi.py",
                 ".dumb",
                 ".after.py",
+                "notpy.npy",
                 "sappy"]
         expected = ["hi.py"]
         check(tree, expected)

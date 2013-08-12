@@ -83,7 +83,7 @@ div.page-header {
     margin: 10px 0 0 0;
     list-style-type: none;
     overflow: hidden;
-    width: 800px;
+    width: 900px;
   }
     ul.page-nav li {
       margin: 0 2px 0 0;
@@ -204,6 +204,9 @@ table tr td {
 table tr td.nowrap {
   white-space: nowrap;
 }
+table tr td.closed { 
+  background-color: #99f; 
+}
 /*
 table tr.parity0:hover,
 table tr.parity1:hover {
@@ -242,6 +245,10 @@ span.logtags span.branchtag {
 span.logtags span.inbranchtag {
   background-color: #d5dde6;
   border-color: #e3ecf4 #9398f4 #9398f4 #e3ecf4;
+}
+span.logtags span.bookmarktag {
+  background-color: #afdffa;
+  border-color: #ccecff #46ace6 #46ace6 #ccecff;
 }
 
 div.diff pre {
@@ -470,3 +477,54 @@ ul#graphnodes li .info {
 	position: relative;
 }
 /** end of canvas **/
+
+/** comparison **/
+.legend {
+    margin-left: 20px;
+    padding: 1.5% 0 1.5% 0;
+}
+
+.legendinfo {
+    border: 1px solid #999;
+    font-size: 80%;
+    text-align: center;
+    padding: 0.5%;
+}
+
+.equal {
+    background-color: #ffffff;
+}
+
+.delete {
+    background-color: #faa;
+    color: #333;
+}
+
+.insert {
+    background-color: #ffa;
+}
+
+.replace {
+    background-color: #e8e8e8;
+}
+
+.comparison {
+    overflow-x: auto;
+}
+
+.comparison table td {
+    padding: 0px 5px;
+}
+
+.header th {
+    font-weight: bold;
+}
+
+.block {
+    border-top: 1px solid #999;
+}
+/** end of comparison **/
+
+.breadcrumb a:hover {
+    text-decoration:underline;
+}

@@ -1,8 +1,8 @@
 from Tkinter import *
-from EditorWindow import EditorWindow
+from idlelib.EditorWindow import EditorWindow
 import re
 import tkMessageBox
-import IOBinding
+from idlelib import IOBinding
 
 class OutputWindow(EditorWindow):
 
@@ -47,8 +47,9 @@ class OutputWindow(EditorWindow):
         self.text.see(mark)
         self.text.update()
 
-    def writelines(self, l):
-        map(self.write, l)
+    def writelines(self, lines):
+        for line in lines:
+            self.write(line)
 
     def flush(self):
         pass
@@ -56,7 +57,11 @@ class OutputWindow(EditorWindow):
     # Our own right-button menu
 
     rmenu_specs = [
-        ("Go to file/line", "<<goto-file-line>>"),
+        ("Cut", "<<cut>>", "rmenu_check_cut"),
+        ("Copy", "<<copy>>", "rmenu_check_copy"),
+        ("Paste", "<<paste>>", "rmenu_check_paste"),
+        (None, None, None),
+        ("Go to file/line", "<<goto-file-line>>", None),
     ]
 
     file_line_pats = [

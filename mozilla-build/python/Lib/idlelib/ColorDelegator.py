@@ -3,8 +3,8 @@ import re
 import keyword
 import __builtin__
 from Tkinter import *
-from Delegator import Delegator
-from configHandler import idleConf
+from idlelib.Delegator import Delegator
+from idlelib.configHandler import idleConf
 
 DEBUG = False
 
@@ -20,10 +20,11 @@ def make_pat():
     # 1st 'file' colorized normal, 2nd as builtin, 3rd as string
     builtin = r"([^.'\"\\#]\b|^)" + any("BUILTIN", builtinlist) + r"\b"
     comment = any("COMMENT", [r"#[^\n]*"])
-    sqstring = r"(\b[rRuU])?'[^'\\\n]*(\\.[^'\\\n]*)*'?"
-    dqstring = r'(\b[rRuU])?"[^"\\\n]*(\\.[^"\\\n]*)*"?'
-    sq3string = r"(\b[rRuU])?'''[^'\\]*((\\.|'(?!''))[^'\\]*)*(''')?"
-    dq3string = r'(\b[rRuU])?"""[^"\\]*((\\.|"(?!""))[^"\\]*)*(""")?'
+    stringprefix = r"(\br|u|ur|R|U|UR|Ur|uR|b|B|br|Br|bR|BR)?"
+    sqstring = stringprefix + r"'[^'\\\n]*(\\.[^'\\\n]*)*'?"
+    dqstring = stringprefix + r'"[^"\\\n]*(\\.[^"\\\n]*)*"?'
+    sq3string = stringprefix + r"'''[^'\\]*((\\.|'(?!''))[^'\\]*)*(''')?"
+    dq3string = stringprefix + r'"""[^"\\]*((\\.|"(?!""))[^"\\]*)*(""")?'
     string = any("STRING", [sq3string, dq3string, sqstring, dqstring])
     return kw + "|" + builtin + "|" + comment + "|" + string +\
            "|" + any("SYNC", [r"\n"])
@@ -248,7 +249,7 @@ class ColorDelegator(Delegator):
             self.tag_remove(tag, "1.0", "end")
 
 def main():
-    from Percolator import Percolator
+    from idlelib.Percolator import Percolator
     root = Tk()
     root.wm_protocol("WM_DELETE_WINDOW", root.quit)
     text = Text(background="white")

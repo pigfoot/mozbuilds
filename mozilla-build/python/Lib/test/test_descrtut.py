@@ -66,7 +66,7 @@ dictionaries, such as the locals/globals dictionaries for the exec
 statement or the built-in function eval():
 
     >>> def sorted(seq):
-    ...     seq.sort()
+    ...     seq.sort(key=str)
     ...     return seq
     >>> print sorted(a.keys())
     [1, 2]
@@ -329,7 +329,7 @@ Attributes defined by get/set methods
     ...         return self.__set(inst, value)
 
 Now let's define a class with an attribute x defined by a pair of methods,
-getx() and and setx():
+getx() and setx():
 
     >>> class C(object):
     ...

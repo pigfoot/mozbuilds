@@ -9,6 +9,7 @@ import string
 from pprint import pprint
 import unittest
 import time
+import sys
 
 from test_all import db, test_support, verbose, get_new_environment_path, \
         get_new_database_path
@@ -33,6 +34,7 @@ class VersionTestCase(unittest.TestCase):
 
 class BasicTestCase(unittest.TestCase):
     dbtype       = db.DB_UNKNOWN  # must be set in derived class
+    cachesize    = (0, 1024*1024, 1)
     dbopenflags  = 0
     dbsetflags   = 0
     dbmode       = 0660
@@ -50,7 +52,8 @@ class BasicTestCase(unittest.TestCase):
                 self.env = db.DBEnv()
                 self.env.set_lg_max(1024*1024)
                 self.env.set_tx_max(30)
-                self.env.set_tx_timestamp(int(time.time()))
+                self._t = int(time.time())
+                self.env.set_tx_timestamp(self._t)
                 self.env.set_flags(self.envsetflags, 1)
                 self.env.open(self.homeDir, self.envflags | db.DB_CREATE)
                 self.filename = "test"
@@ -64,6 +67,14 @@ class BasicTestCase(unittest.TestCase):
 
         # create and open the DB
         self.d = db.DB(self.env)
+        if not self.useEnv :
+            self.d.set_cachesize(*self.cachesize)
+            cachesize = self.d.get_cachesize()
+            self.assertEqual(cachesize[0], self.cachesize[0])
+            self.assertEqual(cachesize[2], self.cachesize[2])
+            # Berkeley DB expands the cache 25% accounting overhead,
+            # if the cache is small.
+            self.assertEqual(125, int(100.0*cachesize[1]/self.cachesize[1]))
         self.d.set_flags(self.dbsetflags)
         if self.dbname:
             self.d.open(self.filename, self.dbname, self.dbtype,
@@ -73,6 +84,10 @@ class BasicTestCase(unittest.TestCase):
                         mode = self.dbmode,
                         dbtype = self.dbtype,
                         flags = self.dbopenflags|db.DB_CREATE)
+
+        if not self.useEnv:
+            self.assertRaises(db.DBInvalidArgError,
+                    self.d.set_cachesize, *self.cachesize)
 
         self.populateDB()
 
@@ -139,8 +154,7 @@ class BasicTestCase(unittest.TestCase):
         try:
             d.delete('abcd')
         except db.DBNotFoundError, val:
-            import sys
-            if sys.version_info[0] < 3 :
+            if sys.version_info < (2, 6) :
                 self.assertEqual(val[0], db.DB_NOTFOUND)
             else :
                 self.assertEqual(val.args[0], db.DB_NOTFOUND)
@@ -162,8 +176,7 @@ class BasicTestCase(unittest.TestCase):
         try:
             d.put('abcd', 'this should fail', flags=db.DB_NOOVERWRITE)
         except db.DBKeyExistError, val:
-            import sys
-            if sys.version_info[0] < 3 :
+            if sys.version_info < (2, 6) :
                 self.assertEqual(val[0], db.DB_KEYEXIST)
             else :
                 self.assertEqual(val.args[0], db.DB_KEYEXIST)
@@ -276,6 +289,21 @@ class BasicTestCase(unittest.TestCase):
             pprint(values[:10])
 
 
+    #----------------------------------------
+
+    def test02b_SequenceMethods(self):
+        d = self.d
+
+        for key in ['0002', '0101', '0401', '0701', '0998']:
+            data = d[key]
+            self.assertEqual(data, self.makeData(key))
+            if verbose:
+                print data
+
+        self.assertTrue(hasattr(d, "__contains__"))
+        self.assertTrue("0401" in d)
+        self.assertFalse("1234" in d)
+
 
     #----------------------------------------
 
@@ -301,8 +329,7 @@ class BasicTestCase(unittest.TestCase):
                 rec = c.next()
             except db.DBNotFoundError, val:
                 if get_raises_error:
-                    import sys
-                    if sys.version_info[0] < 3 :
+                    if sys.version_info < (2, 6) :
                         self.assertEqual(val[0], db.DB_NOTFOUND)
                     else :
                         self.assertEqual(val.args[0], db.DB_NOTFOUND)
@@ -326,8 +353,7 @@ class BasicTestCase(unittest.TestCase):
                 rec = c.prev()
             except db.DBNotFoundError, val:
                 if get_raises_error:
-                    import sys
-                    if sys.version_info[0] < 3 :
+                    if sys.version_info < (2, 6) :
                         self.assertEqual(val[0], db.DB_NOTFOUND)
                     else :
                         self.assertEqual(val.args[0], db.DB_NOTFOUND)
@@ -353,8 +379,7 @@ class BasicTestCase(unittest.TestCase):
         try:
             n = c.set('bad key')
         except db.DBNotFoundError, val:
-            import sys
-            if sys.version_info[0] < 3 :
+            if sys.version_info < (2, 6) :
                 self.assertEqual(val[0], db.DB_NOTFOUND)
             else :
                 self.assertEqual(val.args[0], db.DB_NOTFOUND)
@@ -362,7 +387,7 @@ class BasicTestCase(unittest.TestCase):
         else:
             if set_raises_error:
                 self.fail("expected exception")
-            if n != None:
+            if n is not None:
                 self.fail("expected None: %r" % (n,))
 
         rec = c.get_both('0404', self.makeData('0404'))
@@ -371,8 +396,7 @@ class BasicTestCase(unittest.TestCase):
         try:
             n = c.get_both('0404', 'bad data')
         except db.DBNotFoundError, val:
-            import sys
-            if sys.version_info[0] < 3 :
+            if sys.version_info < (2, 6) :
                 self.assertEqual(val[0], db.DB_NOTFOUND)
             else :
                 self.assertEqual(val.args[0], db.DB_NOTFOUND)
@@ -380,7 +404,7 @@ class BasicTestCase(unittest.TestCase):
         else:
             if get_raises_error:
                 self.fail("expected exception")
-            if n != None:
+            if n is not None:
                 self.fail("expected None: %r" % (n,))
 
         if self.d.get_type() == db.DB_BTREE:
@@ -404,8 +428,7 @@ class BasicTestCase(unittest.TestCase):
             rec = c.current()
         except db.DBKeyEmptyError, val:
             if get_raises_error:
-                import sys
-                if sys.version_info[0] < 3 :
+                if sys.version_info < (2, 6) :
                     self.assertEqual(val[0], db.DB_KEYEMPTY)
                 else :
                     self.assertEqual(val.args[0], db.DB_KEYEMPTY)
@@ -451,10 +474,9 @@ class BasicTestCase(unittest.TestCase):
                     print "attempting to use a closed cursor's %s method" % \
                           method
                 # a bug may cause a NULL pointer dereference...
-                apply(getattr(c, method), args)
+                getattr(c, method)(*args)
             except db.DBError, val:
-                import sys
-                if sys.version_info[0] < 3 :
+                if sys.version_info < (2, 6) :
                     self.assertEqual(val[0], 0)
                 else :
                     self.assertEqual(val.args[0], 0)
@@ -509,6 +531,15 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(old, 1)
         self.test03_SimpleCursorStuff(get_raises_error=0, set_raises_error=0)
 
+    if db.version() >= (4, 6):
+        def test03d_SimpleCursorPriority(self) :
+            c = self.d.cursor()
+            c.set_priority(db.DB_PRIORITY_VERY_LOW)  # Positional
+            self.assertEqual(db.DB_PRIORITY_VERY_LOW, c.get_priority())
+            c.set_priority(priority=db.DB_PRIORITY_HIGH)  # Keyword
+            self.assertEqual(db.DB_PRIORITY_HIGH, c.get_priority())
+            c.close()
+
     #----------------------------------------
 
     def test04_PartialGetAndPut(self):
@@ -562,11 +593,11 @@ class BasicTestCase(unittest.TestCase):
         d = self.d
         if verbose:
             print '\n', '-=' * 30
-            print "Running %s.test99_Truncate..." % self.__class__.__name__
+            print "Running %s.test06_Truncate..." % self.__class__.__name__
 
         d.put("abcde", "ABCDE");
         num = d.truncate()
-        self.assert_(num >= 1, "truncate returned <= 0 on non-empty database")
+        self.assertTrue(num >= 1, "truncate returned <= 0 on non-empty database")
         num = d.truncate()
         self.assertEqual(num, 0,
                 "truncate on empty DB returned nonzero (%r)" % (num,))
@@ -582,6 +613,33 @@ class BasicTestCase(unittest.TestCase):
 
     #----------------------------------------
 
+    if db.version() >= (4, 6):
+        def test08_exists(self) :
+            self.d.put("abcde", "ABCDE")
+            self.assertTrue(self.d.exists("abcde") == True,
+                    "DB->exists() returns wrong value")
+            self.assertTrue(self.d.exists("x") == False,
+                    "DB->exists() returns wrong value")
+
+    #----------------------------------------
+
+    if db.version() >= (4, 7):
+        def test_compact(self) :
+            d = self.d
+            self.assertEqual(0, d.compact(flags=db.DB_FREELIST_ONLY))
+            self.assertEqual(0, d.compact(flags=db.DB_FREELIST_ONLY))
+            d.put("abcde", "ABCDE");
+            d.put("bcde", "BCDE");
+            d.put("abc", "ABC");
+            d.put("monty", "python");
+            d.delete("abc")
+            d.delete("bcde")
+            d.compact(start='abcde', stop='monty', txn=None,
+                    compact_fillpercent=42, compact_pages=1,
+                    compact_timeout=50000000,
+                    flags=db.DB_FREELIST_ONLY|db.DB_FREE_SPACE)
+
+    #----------------------------------------
 
 #----------------------------------------------------------------------
 
@@ -611,13 +669,13 @@ class BasicWithEnvTestCase(BasicTestCase):
 
     #----------------------------------------
 
-    def test08_EnvRemoveAndRename(self):
+    def test09_EnvRemoveAndRename(self):
         if not self.env:
             return
 
         if verbose:
             print '\n', '-=' * 30
-            print "Running %s.test08_EnvRemoveAndRename..." % self.__class__.__name__
+            print "Running %s.test09_EnvRemoveAndRename..." % self.__class__.__name__
 
         # can't rename or remove an open DB
         self.d.close()
@@ -625,10 +683,6 @@ class BasicWithEnvTestCase(BasicTestCase):
         newname = self.filename + '.renamed'
         self.env.dbrename(self.filename, None, newname)
         self.env.dbremove(newname)
-
-    # dbremove and dbrename are in 4.1 and later
-    if db.version() < (4,1):
-        del test08_EnvRemoveAndRename
 
     #----------------------------------------
 
@@ -643,10 +697,10 @@ class BasicHashWithEnvTestCase(BasicWithEnvTestCase):
 #----------------------------------------------------------------------
 
 class BasicTransactionTestCase(BasicTestCase):
-    import sys
-    if sys.version_info[:3] < (2, 4, 0):
-        def assertTrue(self, expr, msg=None):
-            self.failUnless(expr,msg=msg)
+    if (sys.version_info < (2, 7)) or ((sys.version_info >= (3, 0)) and
+            (sys.version_info < (3, 2))) :
+        def assertIn(self, a, b, msg=None) :
+            return self.assertTrue(a in b, msg=msg)
 
     dbopenflags = db.DB_THREAD | db.DB_AUTO_COMMIT
     useEnv = 1
@@ -704,16 +758,13 @@ class BasicTransactionTestCase(BasicTestCase):
         self.txn.commit()
 
         # flush pending updates
-        try:
-            self.env.txn_checkpoint (0, 0, 0)
-        except db.DBIncompleteError:
-            pass
+        self.env.txn_checkpoint (0, 0, 0)
 
         statDict = self.env.log_stat(0);
-        self.assert_(statDict.has_key('magic'))
-        self.assert_(statDict.has_key('version'))
-        self.assert_(statDict.has_key('cur_file'))
-        self.assert_(statDict.has_key('region_nowait'))
+        self.assertIn('magic', statDict)
+        self.assertIn('version', statDict)
+        self.assertIn('cur_file', statDict)
+        self.assertIn('region_nowait', statDict)
 
         # must have at least one log file present:
         logs = self.env.log_archive(db.DB_ARCH_ABS | db.DB_ARCH_LOG)
@@ -721,7 +772,6 @@ class BasicTransactionTestCase(BasicTestCase):
         for log in logs:
             if verbose:
                 print 'log file: ' + log
-        if db.version() >= (4,2):
             logs = self.env.log_archive(db.DB_ARCH_REMOVE)
             self.assertTrue(not logs)
 
@@ -729,16 +779,30 @@ class BasicTransactionTestCase(BasicTestCase):
 
     #----------------------------------------
 
-    def test08_TxnTruncate(self):
+    if db.version() >= (4, 6):
+        def test08_exists(self) :
+            txn = self.env.txn_begin()
+            self.d.put("abcde", "ABCDE", txn=txn)
+            txn.commit()
+            txn = self.env.txn_begin()
+            self.assertTrue(self.d.exists("abcde", txn=txn) == True,
+                    "DB->exists() returns wrong value")
+            self.assertTrue(self.d.exists("x", txn=txn) == False,
+                    "DB->exists() returns wrong value")
+            txn.abort()
+
+    #----------------------------------------
+
+    def test09_TxnTruncate(self):
         d = self.d
         if verbose:
             print '\n', '-=' * 30
-            print "Running %s.test08_TxnTruncate..." % self.__class__.__name__
+            print "Running %s.test09_TxnTruncate..." % self.__class__.__name__
 
         d.put("abcde", "ABCDE");
         txn = self.env.txn_begin()
         num = d.truncate(txn)
-        self.assert_(num >= 1, "truncate returned <= 0 on non-empty database")
+        self.assertTrue(num >= 1, "truncate returned <= 0 on non-empty database")
         num = d.truncate(txn)
         self.assertEqual(num, 0,
                 "truncate on empty DB returned nonzero (%r)" % (num,))
@@ -746,7 +810,7 @@ class BasicTransactionTestCase(BasicTestCase):
 
     #----------------------------------------
 
-    def test09_TxnLateUse(self):
+    def test10_TxnLateUse(self):
         txn = self.env.txn_begin()
         txn.abort()
         try:
@@ -766,6 +830,38 @@ class BasicTransactionTestCase(BasicTestCase):
             raise RuntimeError, "DBTxn.commit() called after DB_TXN no longer valid w/o an exception"
 
 
+    #----------------------------------------
+
+
+    if db.version() >= (4, 4):
+        def test_txn_name(self) :
+            txn=self.env.txn_begin()
+            self.assertEqual(txn.get_name(), "")
+            txn.set_name("XXYY")
+            self.assertEqual(txn.get_name(), "XXYY")
+            txn.set_name("")
+            self.assertEqual(txn.get_name(), "")
+            txn.abort()
+
+    #----------------------------------------
+
+
+        def test_txn_set_timeout(self) :
+            txn=self.env.txn_begin()
+            txn.set_timeout(1234567, db.DB_SET_LOCK_TIMEOUT)
+            txn.set_timeout(2345678, flags=db.DB_SET_TXN_TIMEOUT)
+            txn.abort()
+
+    #----------------------------------------
+
+        def test_get_tx_max(self) :
+            self.assertEqual(self.env.get_tx_max(), 30)
+
+        def test_get_tx_timestamp(self) :
+            self.assertEqual(self.env.get_tx_timestamp(), self._t)
+
+
+
 class BTreeTransactionTestCase(BasicTransactionTestCase):
     dbtype = db.DB_BTREE
 
@@ -780,11 +876,11 @@ class BTreeRecnoTestCase(BasicTestCase):
     dbtype     = db.DB_BTREE
     dbsetflags = db.DB_RECNUM
 
-    def test08_RecnoInBTree(self):
+    def test09_RecnoInBTree(self):
         d = self.d
         if verbose:
             print '\n', '-=' * 30
-            print "Running %s.test08_RecnoInBTree..." % self.__class__.__name__
+            print "Running %s.test09_RecnoInBTree..." % self.__class__.__name__
 
         rec = d.get(200)
         self.assertEqual(type(rec), type(()))
@@ -814,11 +910,11 @@ class BTreeRecnoWithThreadFlagTestCase(BTreeRecnoTestCase):
 class BasicDUPTestCase(BasicTestCase):
     dbsetflags = db.DB_DUP
 
-    def test09_DuplicateKeys(self):
+    def test10_DuplicateKeys(self):
         d = self.d
         if verbose:
             print '\n', '-=' * 30
-            print "Running %s.test09_DuplicateKeys..." % \
+            print "Running %s.test10_DuplicateKeys..." % \
                   self.__class__.__name__
 
         d.put("dup0", "before")
@@ -887,11 +983,11 @@ class BasicMultiDBTestCase(BasicTestCase):
         else:
             return db.DB_BTREE
 
-    def test10_MultiDB(self):
+    def test11_MultiDB(self):
         d1 = self.d
         if verbose:
             print '\n', '-=' * 30
-            print "Running %s.test10_MultiDB..." % self.__class__.__name__
+            print "Running %s.test11_MultiDB..." % self.__class__.__name__
 
         d2 = db.DB(self.env)
         d2.open(self.filename, "second", self.dbtype,
@@ -980,11 +1076,6 @@ class HashMultiDBTestCase(BasicMultiDBTestCase):
 
 
 class PrivateObject(unittest.TestCase) :
-    import sys
-    if sys.version_info[:3] < (2, 4, 0):
-        def assertTrue(self, expr, msg=None):
-            self.failUnless(expr,msg=msg)
-
     def tearDown(self) :
         del self.obj
 
@@ -998,7 +1089,6 @@ class PrivateObject(unittest.TestCase) :
         self.assertTrue(a is b)  # Object identity
 
     def test03_leak_assignment(self) :
-        import sys
         a = "example of private object"
         refcount = sys.getrefcount(a)
         self.obj.set_private(a)
@@ -1007,7 +1097,6 @@ class PrivateObject(unittest.TestCase) :
         self.assertEqual(refcount, sys.getrefcount(a))
 
     def test04_leak_GC(self) :
-        import sys
         a = "example of private object"
         refcount = sys.getrefcount(a)
         self.obj.set_private(a)
@@ -1023,20 +1112,16 @@ class DBPrivateObject(PrivateObject) :
         self.obj = db.DB()
 
 class CrashAndBurn(unittest.TestCase) :
-    import sys
-    if sys.version_info[:3] < (2, 4, 0):
-        def assertTrue(self, expr, msg=None):
-            self.failUnless(expr,msg=msg)
-
     #def test01_OpenCrash(self) :
     #    # See http://bugs.python.org/issue3307
     #    self.assertRaises(db.DBInvalidArgError, db.DB, None, 65535)
 
-    def test02_DBEnv_dealloc(self):
-        # http://bugs.python.org/issue3885
-        import gc
-        self.assertRaises(db.DBInvalidArgError, db.DBEnv, ~db.DB_RPCCLIENT)
-        gc.collect()
+    if db.version() < (4, 8) :
+        def test02_DBEnv_dealloc(self):
+            # http://bugs.python.org/issue3885
+            import gc
+            self.assertRaises(db.DBInvalidArgError, db.DBEnv, ~db.DB_RPCCLIENT)
+            gc.collect()
 
 
 #----------------------------------------------------------------------

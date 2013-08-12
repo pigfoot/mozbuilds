@@ -1,9 +1,8 @@
-This is Python version 2.6.5
+This is Python version 2.7.4
 ============================
 
-Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-Python Software Foundation.
-All rights reserved.
+Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,
+2012, 2013 Python Software Foundation.  All rights reserved.
 
 Copyright (c) 2000 BeOpen.com.
 All rights reserved.
@@ -97,9 +96,6 @@ Web sites
 New Python releases and related technologies are published at
 http://www.python.org/.  Come visit us!
 
-There's also a Python community web site at
-http://starship.python.net/.
-
 
 Newsgroups and Mailing Lists
 ----------------------------
@@ -166,7 +162,7 @@ variables.  When it's done, you are ready to run make.
 
 To build Python, you normally type "make" in the toplevel directory.
 If you have changed the configuration, the Makefile may have to be
-rebuilt.  In this case you may have to run make again to correctly
+rebuilt.  In this case, you may have to run make again to correctly
 build your desired target.  The interpreter executable is built in the
 top level directory.
 
@@ -228,8 +224,8 @@ executable which is compiling the library.
 Unsupported systems
 -------------------
 
-A number of features are not supported in Python 2.5 anymore. Some
-support code is still present, but will be removed in Python 2.6. 
+A number of systems are not supported in Python 2.7 anymore. Some
+support code is still present, but will be removed in later versions.
 If you still need to use current Python versions on these systems,
 please send a message to python-dev@python.org indicating that you
 volunteer to support this system. For a more detailed discussion 
@@ -245,30 +241,15 @@ longer:
 - NeXT
 - Irix 4 and --with-sgi-dl
 - Linux 1
-- Systems defining __d6_pthread_create (configure.in)
+- Systems defining __d6_pthread_create (configure.ac)
 - Systems defining PY_PTHREAD_D4, PY_PTHREAD_D6,
   or PY_PTHREAD_D7 in thread_pthread.h
 - Systems using --with-dl-dld
 - Systems using --without-universal-newlines
 - MacOS 9
-
-The following systems are still supported in Python 2.5, but
-support will be dropped in 2.6:
 - Systems using --with-wctype-functions
 - Win9x, WinME
 
-Warning on install in Windows 98 and Windows Me
------------------------------------------------
-
-Following Microsoft's closing of Extended Support for
-Windows 98/ME (July 11, 2006), Python 2.6 will stop
-supporting these platforms. Python development and
-maintainability becomes easier (and more reliable) when
-platform specific code targeting OSes with few users
-and no dedicated expert developers is taken out. The
-vendor also warns that the OS versions listed above
-"can expose customers to security risks" and recommends
-upgrade.
 
 Platform specific notes
 -----------------------
@@ -550,14 +531,6 @@ OS/2:   If you are running Warp3 or Warp4 and have IBM's VisualAge C/C++
         and type NMAKE.  Threading and sockets are supported by default
         in the resulting binaries of PYTHON15.DLL and PYTHON.EXE.
 
-Monterey (64-bit AIX): The current Monterey C compiler (Visual Age)
-        uses the OBJECT_MODE={32|64} environment variable to set the
-        compilation mode to either 32-bit or 64-bit (32-bit mode is
-        the default).  Presumably you want 64-bit compilation mode for
-        this 64-bit OS.  As a result you must first set OBJECT_MODE=64
-        in your environment before configuring (./configure) or
-        building (make) Python on Monterey.
-
 Reliant UNIX: The thread support does not compile on Reliant UNIX, and
         there is a (minor) problem in the configure script for that
         platform as well.  This should be resolved in time for a
@@ -707,10 +680,10 @@ platforms, additional compiler and/or linker options are required for
 threads to work properly.  Below is a table of those options,
 collected by Bill Janssen.  We would love to automate this process
 more, but the information below is not enough to write a patch for the
-configure.in file, so manual intervention is required.  If you patch
-the configure.in file and are confident that the patch works, please
+configure.ac file, so manual intervention is required.  If you patch
+the configure.ac file and are confident that the patch works, please
 send in the patch.  (Don't bother patching the configure script itself
--- it is regenerated each time the configure.in file changes.)
+-- it is regenerated each time the configure.ac file changes.)
 
 Compiler switches for threads
 .............................
@@ -880,11 +853,14 @@ that are not yet using glibc 6), test_strftime fails due to a
 non-standard implementation of strftime() in the C library. Please
 ignore this, or upgrade to glibc version 6.
 
+By default, tests are prevented from overusing resources like disk space and
+memory.  To enable these tests, run "make testall".
+
 IMPORTANT: If the tests fail and you decide to mail a bug report,
 *don't* include the output of "make test".  It is useless.  Run the
 failing test manually, as follows:
 
-        ./python ./Lib/test/test_whatever.py
+        ./python Lib/test/regrtest.py -v test_whatever
 
 (substituting the top of the source tree for '.' if you built in a
 different directory).  This runs the test in verbose mode.
@@ -939,7 +915,7 @@ Installing multiple versions
 On Unix and Mac systems if you intend to install multiple versions of Python
 using the same installation prefix (--prefix argument to the configure
 script) you must take care that your primary python executable is not
-overwritten by the installation of a different versio.  All files and
+overwritten by the installation of a different version.  All files and
 directories installed using "make altinstall" contain the major and minor
 version and can thus live side-by-side.  "make install" also creates
 ${prefix}/bin/python which refers to ${prefix}/bin/pythonX.Y.  If you intend
@@ -1083,6 +1059,9 @@ Modules/getpath.o.
 --with-system-ffi:  Build the _ctypes extension module using an ffi
         library installed on the system.
 
+--with-dbmliborder=db1:db2:...:  Specify the order that backends for the
+	dbm extension are checked. Valid value is a colon separated string
+	with the backend names `ndbm', `gdbm' and `bdb'.
 
 Building for multiple architectures (using the VPATH feature)
 -------------------------------------------------------------
@@ -1167,16 +1146,10 @@ Emacs mode
 ----------
 
 There's an excellent Emacs editing mode for Python code; see the file
-Misc/python-mode.el.  Originally written by the famous Tim Peters, it
-is now maintained by the equally famous Barry Warsaw (it's no
-coincidence that they now both work on the same team).  The latest
-version, along with various other contributed Python-related Emacs
-goodies, is online at http://www.python.org/emacs/python-mode/.  And
-if you are planning to edit the Python C code, please pick up the
-latest version of CC Mode http://www.python.org/emacs/cc-mode/; it
-contains a "python" style used throughout most of the Python C source
-files.  (Newer versions of Emacs or XEmacs may already come with the
-latest version of python-mode.)
+Misc/python-mode.el.  Originally written by the famous Tim Peters, it is now
+maintained by the equally famous Barry Warsaw.  The latest version, along with
+various other contributed Python-related Emacs goodies, is online at
+http://launchpad.net/python-mode/.
 
 
 Tkinter
@@ -1228,7 +1201,7 @@ RISCOS/         Files specific to RISC OS port
 Tools/          Some useful programs written in Python
 pyconfig.h.in   Source from which pyconfig.h is created (GNU autoheader output)
 configure       Configuration shell script (GNU autoconf output)
-configure.in    Configuration specification (input for GNU autoconf)
+configure.ac    Configuration specification (input for GNU autoconf)
 install-sh      Shell script used to install files
 setup.py        Python script used to build extension modules
 

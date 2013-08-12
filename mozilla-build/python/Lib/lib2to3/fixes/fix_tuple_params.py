@@ -29,6 +29,10 @@ def is_docstring(stmt):
            stmt.children[0].type == token.STRING
 
 class FixTupleParams(fixer_base.BaseFix):
+    run_order = 4 #use a lower order since lambda is part of other
+                  #patterns
+    BM_compatible = True
+
     PATTERN = """
               funcdef< 'def' any parameters< '(' args=any ')' >
                        ['->' any] ':' suite=any+ >
@@ -54,7 +58,7 @@ class FixTupleParams(fixer_base.BaseFix):
             end = Newline()
         else:
             start = 0
-            indent = "; "
+            indent = u"; "
             end = pytree.Leaf(token.INDENT, u"")
 
         # We need access to self for new_name(), and making this a method
@@ -154,7 +158,7 @@ def map_to_index(param_list, prefix=[], d=None):
     if d is None:
         d = {}
     for i, obj in enumerate(param_list):
-        trailer = [Subscript(Number(i))]
+        trailer = [Subscript(Number(unicode(i)))]
         if isinstance(obj, list):
             map_to_index(obj, trailer, d=d)
         else:

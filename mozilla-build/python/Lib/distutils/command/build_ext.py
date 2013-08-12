@@ -6,7 +6,7 @@ extensions ASAP)."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: build_ext.py 75395 2009-10-13 21:17:34Z tarek.ziade $"
+__revision__ = "$Id$"
 
 import sys, os, string, re
 from types import *
@@ -160,8 +160,7 @@ class build_ext (Command):
         if plat_py_include != py_include:
             self.include_dirs.append(plat_py_include)
 
-        if isinstance(self.libraries, str):
-            self.libraries = [self.libraries]
+        self.ensure_string_list('libraries')
 
         # Life is easier if we're not forever checking for None, so
         # simplify these options to empty lists if unset
@@ -207,7 +206,7 @@ class build_ext (Command):
 
             elif MSVC_VERSION == 8:
                 self.library_dirs.append(os.path.join(sys.exec_prefix,
-                                         'PC', 'VS8.0', 'win32release'))
+                                         'PC', 'VS8.0'))
             elif MSVC_VERSION == 7:
                 self.library_dirs.append(os.path.join(sys.exec_prefix,
                                          'PC', 'VS7.1'))
@@ -676,7 +675,7 @@ class build_ext (Command):
         # extensions in debug_mode are named 'module_d.pyd' under windows
         so_ext = get_config_var('SO')
         if os.name == 'nt' and self.debug:
-            return apply(os.path.join, ext_path) + '_d' + so_ext
+            return os.path.join(*ext_path) + '_d' + so_ext
         return os.path.join(*ext_path) + so_ext
 
     def get_export_symbols (self, ext):
@@ -753,7 +752,9 @@ class build_ext (Command):
         elif sys.platform == 'darwin':
             # Don't use the default code below
             return ext.libraries
-
+        elif sys.platform[:3] == 'aix':
+            # Don't use the default code below
+            return ext.libraries
         else:
             from distutils import sysconfig
             if sysconfig.get_config_var('Py_ENABLE_SHARED'):

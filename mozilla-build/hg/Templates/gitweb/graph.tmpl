@@ -1,34 +1,37 @@
 {header}
 <title>{repo|escape}: Graph</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-log" title="Atom feed for {repo|escape}"/>
+   href="{url|urlescape}atom-log" title="Atom feed for {repo|escape}"/>
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-log" title="RSS feed for {repo|escape}"/>
-<!--[if IE]><script type="text/javascript" src="{staticurl}excanvas.js"></script><![endif]-->
+   href="{url|urlescape}rss-log" title="RSS feed for {repo|escape}"/>
+<!--[if IE]><script type="text/javascript" src="{staticurl|urlescape}excanvas.js"></script><![endif]-->
 </head>
 <body>
 
 <div class="page_header">
-<a href="http://mercurial.selenic.com/" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / graph
+<a href="{logourl}" title="Mercurial" style="float: right;">Mercurial</a>
+<a href="/">Mercurial</a> {pathdef%breadcrumb} / graph
 </div>
 
-<form action="{url}log">
+<form action="{url|urlescape}log">
 {sessionvars%hiddenformentry}
 <div class="search">
 <input type="text" name="rev"  />
 </div>
 </form>
 <div class="page_nav">
-<a href="{url}summary{sessionvars%urlparameter}">summary</a> |
-<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
-<a href="{url}log/{rev}{sessionvars%urlparameter}">changelog</a> |
+<a href="{url|urlescape}summary{sessionvars%urlparameter}">summary</a> |
+<a href="{url|urlescape}shortlog{sessionvars%urlparameter}">shortlog</a> |
+<a href="{url|urlescape}log/{rev}{sessionvars%urlparameter}">changelog</a> |
 graph |
-<a href="{url}tags{sessionvars%urlparameter}">tags</a> |
-<a href="{url}branches{sessionvars%urlparameter}">branches</a> |
-<a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a>
+<a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a> |
+<a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a> |
+<a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a> |
+<a href="{url|urlescape}file/{node|short}{sessionvars%urlparameter}">files</a> |
+<a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>
 <br/>
-<a href="{url}graph/{rev}{lessvars%urlparameter}">less</a>
-<a href="{url}graph/{rev}{morevars%urlparameter}">more</a>
+<a href="{url|urlescape}graph/{rev}{lessvars%urlparameter}">less</a>
+<a href="{url|urlescape}graph/{rev}{morevars%urlparameter}">more</a>
 | {changenav%navgraph}<br/>
 </div>
 
@@ -38,11 +41,10 @@ graph |
 
 <div id="wrapper">
 <ul id="nodebgs"></ul>
-<canvas id="graph" width="224" height="{canvasheight}"></canvas>
+<canvas id="graph" width="480" height="{canvasheight}"></canvas>
 <ul id="graphnodes"></ul>
 </div>
 
-<script type="text/javascript" src="{staticurl}graph.js"></script>
 <script>
 <!-- hide script content
 
@@ -50,22 +52,7 @@ var data = {jsdata|json};
 var graph = new Graph();
 graph.scale({bg_height});
 
-graph.edge = function(x0, y0, x1, y1, color) {
-	
-	this.setColor(color, 0.0, 0.65);
-	this.ctx.beginPath();
-	this.ctx.moveTo(x0, y0);
-	this.ctx.lineTo(x1, y1);
-	this.ctx.stroke();
-	
-}
-
-var revlink = '<li style="_STYLE"><span class="desc">';
-revlink += '<a class="list" href="{url}rev/_NODEID{sessionvars%urlparameter}" title="_NODEID"><b>_DESC</b></a>';
-revlink += '</span> _TAGS';
-revlink += '<span class="info">_DATE, by _USER</span></li>';
-
-graph.vertex = function(x, y, color, parity, cur) {
+graph.vertex = function(x, y, color, parity, cur) \{
 	
 	this.ctx.beginPath();
 	color = this.setColor(color, 0.25, 0.75);
@@ -73,36 +60,39 @@ graph.vertex = function(x, y, color, parity, cur) {
 	this.ctx.fill();
 	
 	var bg = '<li class="bg parity' + parity + '"></li>';
-	var left = (this.columns + 1) * this.bg_height;
+	var left = (this.bg_height - this.box_size) + (this.columns + 1) * this.box_size;
 	var nstyle = 'padding-left: ' + left + 'px;';
-	var item = revlink.replace(/_STYLE/, nstyle);
-	item = item.replace(/_PARITY/, 'parity' + parity);
-	item = item.replace(/_NODEID/, cur[0]);
-	item = item.replace(/_NODEID/, cur[0]);
-	item = item.replace(/_DESC/, cur[3]);
-	item = item.replace(/_USER/, cur[4]);
-	item = item.replace(/_DATE/, cur[5]);
 	
 	var tagspan = '';
-	if (cur[7].length || (cur[6][0] != 'default' || cur[6][1])) {
+	if (cur[7].length || cur[8].length || (cur[6][0] != 'default' || cur[6][1])) \{
 		tagspan = '<span class="logtags">';
-		if (cur[6][1]) {
+		if (cur[6][1]) \{
 			tagspan += '<span class="branchtag" title="' + cur[6][0] + '">';
 			tagspan += cur[6][0] + '</span> ';
-		} else if (!cur[6][1] && cur[6][0] != 'default') {
+		} else if (!cur[6][1] && cur[6][0] != 'default') \{
 			tagspan += '<span class="inbranchtag" title="' + cur[6][0] + '">';
 			tagspan += cur[6][0] + '</span> ';
 		}
-		if (cur[7].length) {
-			for (var t in cur[7]) {
+		if (cur[7].length) \{
+			for (var t in cur[7]) \{
 				var tag = cur[7][t];
 				tagspan += '<span class="tagtag">' + tag + '</span> ';
+			}
+		}
+		if (cur[8].length) \{
+			for (var t in cur[8]) \{
+				var bookmark = cur[8][t];
+				tagspan += '<span class="bookmarktag">' + bookmark + '</span> ';
 			}
 		}
 		tagspan += '</span>';
 	}
 	
-	item = item.replace(/_TAGS/, tagspan);
+	var item = '<li style="' + nstyle + '"><span class="desc">';
+	item += '<a class="list" href="{url|urlescape}rev/' + cur[0] + '{sessionvars%urlparameter}" title="' + cur[0] + '"><b>' + cur[3] + '</b></a>';
+	item += '</span> ' + tagspan + '';
+	item += '<span class="info">' + cur[5] + ', by ' + cur[4] + '</span></li>';
+
 	return [bg, item];
 	
 }
@@ -113,8 +103,8 @@ graph.render(data);
 </script>
 
 <div class="page_nav">
-<a href="{url}graph/{rev}{lessvars%urlparameter}">less</a>
-<a href="{url}graph/{rev}{morevars%urlparameter}">more</a>
+<a href="{url|urlescape}graph/{rev}{lessvars%urlparameter}">less</a>
+<a href="{url|urlescape}graph/{rev}{morevars%urlparameter}">more</a>
 | {changenav%navgraph}
 </div>
 
