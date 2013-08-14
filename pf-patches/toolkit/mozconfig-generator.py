@@ -118,7 +118,6 @@ class MozGenerator:
     def generate(self):
         # Comment me
         print """\
-
 """
         if (self.project != 3):
             if (self.project == 1):
@@ -140,8 +139,8 @@ class MozGenerator:
             print line
 
         print "mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../ff-p%d-opt" % (self.arch + 1)
-        print "mk_add_options PROFILE_GEN_SCRIPT='$(PYTHON) $(MOZ_OBJDIR)/_profile/pgo/profileserver.py'"
-
+        print "mk_add_options MOZ_PGO=1"
+        print "#mk_add_options PROFILE_GEN_SCRIPT='$(PYTHON) $(MOZ_OBJDIR)/_profile/pgo/profileserver.py'"
 
         print """
 #

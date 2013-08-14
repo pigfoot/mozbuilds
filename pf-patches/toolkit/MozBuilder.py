@@ -33,6 +33,10 @@ class MozBuilder:
         self.MinefieldPatchSet = [
         ]
 
+        self.FF23PatchSet = [
+            '02_tweaks.patch',
+        ]
+
         self.FF13PatchSet = [
             '02_tweaks.patch',
         ]
@@ -96,6 +100,7 @@ class MozBuilder:
 
         self.aDictBranch = { \
             'Minefield'     : { 'Ver' : 'Trunk',            'PatchVer':  0, 'PatchPath': '../pf-patches/patchset/0_Minefield/',    'PatchSet' : self.MinefieldPatchSet    },
+            'FF23'          : { 'Ver' : '23.0-Release',     'PatchVer': 23, 'PatchPath': '../pf-patches/patchset/23_FF23/',        'PatchSet' : self.FF23PatchSet         },
             'FF13'          : { 'Ver' : '13.0.1-Release',   'PatchVer': 13, 'PatchPath': '../pf-patches/patchset/13_FF13/',        'PatchSet' : self.FF13PatchSet         },
             'FF11'          : { 'Ver' : '11.0-Release',     'PatchVer': 12, 'PatchPath': '../pf-patches/patchset/12_FF11/',        'PatchSet' : self.FF11PatchSet         },
             'FF9'           : { 'Ver' : '9.0.1-Release',    'PatchVer': 11, 'PatchPath': '../pf-patches/patchset/11_FF9/',         'PatchSet' : self.FF9PatchSet          },
@@ -109,10 +114,10 @@ class MozBuilder:
         }
 
         self.aDictArch = { \
-            'p0' : { 'Tag': 'p0', 'Ver' : 'VC10-P0'},
-            'p1' : { 'Tag': 'p1', 'Ver' : 'VC10-P1'},
-            'p2' : { 'Tag': 'p2', 'Ver' : 'VC10-P2'},
-            'p3' : { 'Tag': 'p3', 'Ver' : 'VC10-P3'},
+            'p0' : { 'Tag': 'p0', 'Ver' : 'VC11-P0'},
+            'p1' : { 'Tag': 'p1', 'Ver' : 'VC11-P1'},
+            'p2' : { 'Tag': 'p2', 'Ver' : 'VC11-P2'},
+            'p3' : { 'Tag': 'p3', 'Ver' : 'VC11-P3'},
         }
 
         #self.szTime = datetime.date.today().strftime('%Y%m%d')
@@ -129,8 +134,10 @@ class MozBuilder:
         if (not self.preInst()):
             return
 
-        self.system('make -C mozilla -f client.mk profiledbuild 2>&1 | tee BuildLog.txt')
-        self.system('make -C ff-%s-opt package 2>&1 | tee -a BuildLog.txt' % szArch)
+        #self.system('make -C mozilla -f client.mk profiledbuild 2>&1 | tee BuildLog.txt')
+        #self.system('make -C ff-%s-opt package 2>&1 | tee -a BuildLog.txt' % szArch)
+        self.system('python mozilla/build/pymake/make.py -C mozilla -f client.mk profiledbuild 2>&1 | tee BuildLog.txt')
+        self.system('python mozilla/build/pymake/make.py -C ff-%s-opt package 2>&1 | tee -a BuildLog.txt' % szArch)
 
         if (not self.postInst()):
             return
@@ -230,8 +237,8 @@ class MozBuilder:
 
         shutil.copy2(os.path.join('..', 'pf-patches', 'plugins', 'np-mswmp.dll'), os.path.join(szTargetDir, 'plugins', 'np-mswmp.dll'))
         shutil.copy2(os.path.join('..', 'pf-patches', 'searchplugins', 'dictionary-com.xml'), os.path.join(szTargetDir, 'searchplugins', 'dictionary-com.xml'))
-        shutil.copy2(os.path.join('..', 'pf-patches', 'msvcrt', 'msvcr100.dll'), os.path.join(szTargetDir))
-        shutil.copy2(os.path.join('..', 'pf-patches', 'msvcrt', 'msvcp100.dll'), os.path.join(szTargetDir))
+        shutil.copy2(os.path.join('..', 'pf-patches', 'msvcrt', 'msvcr110.dll'), os.path.join(szTargetDir))
+        shutil.copy2(os.path.join('..', 'pf-patches', 'msvcrt', 'msvcp110.dll'), os.path.join(szTargetDir))
 
         szCustomDir = os.path.join(szTargetDir, '%s (pigfoot) %s' % (self.szTime, self.aDictArch[self.szArch]['Ver']))
         if (os.path.exists(os.path.join(szCustomDir))):
